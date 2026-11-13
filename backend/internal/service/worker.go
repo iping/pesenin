@@ -24,6 +24,8 @@ func (a *App) RunWorker(ctx context.Context) {
 }
 
 func (a *App) Tick(ctx context.Context) {
+	a.tickMu.Lock()
+	defer a.tickMu.Unlock()
 	a.openDue(ctx)
 	a.closeDue(ctx)
 	a.expireOrders(ctx)

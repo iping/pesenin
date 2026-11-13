@@ -2,10 +2,12 @@ package httpapi
 
 import (
 	"context"
+	"crypto/subtle"
 	"encoding/json"
 	"errors"
 	"io"
 	"net/http"
+	"os"
 	"strconv"
 	"time"
 
@@ -31,6 +33,8 @@ func (s *Server) Router() http.Handler {
 	r.Get("/api/healthz", func(w http.ResponseWriter, _ *http.Request) {
 		writeJSON(w, 200, map[string]string{"ok": "true"})
 	})
+	r.Get("/api/v1/internal/tick", s.tick)
+	r.Post("/api/v1/internal/tick", s.tick)
 	r.Get("/api/v1/media/*", s.media)
 
 	r.Route("/api/v1", func(r chi.Router) {
@@ -139,6 +143,21 @@ func (s *Server) authn(next http.Handler) http.Handler {
 		}
 		next.ServeHTTP(w, r.WithContext(withUser(r.Context(), u)))
 	})
+}
+
+// tick runs the same maintenance pass as the in-process worker.
+// Vercel can call it with Authorization: Bearer $CRON_SECRET when the
+// Go instance has scaled to zero. The route stays closed until that secret is set.
+func (s *Server) tick(w http.ResponseWriter, r *http.Request) {
+	secret := os.Getenv("CRON_SECRET")
+	got := r.Header.Get("Authorization")
+	expect := "Bearer " + secret
+	if secret == "" || len(got) != len(expect) || subtle.ConstantTimeCompare([]byte(got), []byte(expect)) != 1 {
+		writeErr(w, service.E(401, "unauthorized", "Unauthorized."))
+		return
+	}
+	s.App.Tick(r.Context())
+	writeJSON(w, 200, map[string]bool{"ok": true})
 }
 
 func writeJSON(w http.ResponseWriter, status int, v any) {

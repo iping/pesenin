@@ -56,3 +56,7 @@ One machine can run the Compose stack behind Caddy on `pesenin.product.biz.id`.
 6. Keep the Postgres volume and the upload volume. Proofs stay 90 days; back up the database daily (`pg_dump`).
 
 The API binary runs migrations on startup.
+
+## Vercel (DEV)
+
+One project can serve the SvelteKit app and the Go API on the same origin. Services and the Go runtime are in beta. Compose is unchanged. Settings, the env var list, the Google redirect URI, and the Neon migration command are in [DEPLOY-VERCEL.md](DEPLOY-VERCEL.md).

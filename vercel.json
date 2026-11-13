@@ -1,0 +1,27 @@
+{
+  "$schema": "https://openapi.vercel.sh/vercel.json",
+  "services": {
+    "web": {
+      "root": "frontend",
+      "framework": "sveltekit",
+      "installCommand": "npm ci",
+      "bindings": [
+        {
+          "type": "service",
+          "service": "api",
+          "format": "url",
+          "env": "API_INTERNAL_URL"
+        }
+      ]
+    },
+    "api": {
+      "root": "backend",
+      "framework": "go",
+      "buildCommand": "go build -o server ./cmd/api"
+    }
+  },
+  "rewrites": [
+    { "source": "/api/(.*)", "destination": { "service": "api" } },
+    { "source": "/(.*)", "destination": { "service": "web" } }
+  ]
+}
