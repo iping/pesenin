@@ -63,7 +63,7 @@ func storeJSON(st db.Store) map[string]any {
 	return map[string]any{
 		"id": st.ID, "name": st.Name, "slug": st.Slug, "address": st.Address, "mapsUrl": st.MapsUrl,
 		"timezone": st.Timezone,
-		"isOpen": st.IsOpen, "acceptPreordersWhenClosed": st.AcceptPreordersWhenClosed, "isDefault": st.IsDefault,
+		"isOpen":   st.IsOpen, "acceptPreordersWhenClosed": st.AcceptPreordersWhenClosed, "isDefault": st.IsDefault,
 	}
 }
 
@@ -90,7 +90,7 @@ func batchJSON(b db.PoBatch, items []db.BatchItem, tz string) map[string]any {
 	return map[string]any{
 		"id": b.ID, "code": b.Code, "title": b.Title, "status": b.Status,
 		"opensAt": ts(b.OpensAt), "closesAt": ts(b.ClosesAt), "readyAt": ts(b.ReadyAt),
-		"pickupSlots": slotJSON(b.PickupSlots, tz),
+		"pickupSlots":       slotJSON(b.PickupSlots, tz),
 		"paymentDeadlineAt": tsP(b.PaymentDeadlineAt), "paymentDeadlineMins": b.PaymentDeadlineMins, "quotaTotal": b.QuotaTotal,
 		"allowPickup": b.AllowPickup, "allowDelivery": b.AllowDelivery, "notes": b.Notes,
 		"timezone": tz, "serverNow": time.Now().UTC().Format(time.RFC3339),
@@ -143,7 +143,7 @@ func orderJSON(d service.OrderDetail) map[string]any {
 		"expiresAt": tsP(d.Order.ExpiresAt), "paidAt": tsP(d.Order.PaidAt), "createdAt": ts(d.Order.CreatedAt),
 		"pickupSlotStart": tsP(d.Order.PickupSlotStart), "pickupSlotEnd": tsP(d.Order.PickupSlotEnd),
 		"serverNow": time.Now().UTC().Format(time.RFC3339),
-		"items": items, "charges": charges, "latestRejectReason": reject, "proofs": proofs,
+		"items":     items, "charges": charges, "latestRejectReason": reject, "proofs": proofs,
 		"customer": map[string]any{"id": d.Customer.ID, "name": d.Customer.Name, "wa": d.Customer.WaNumberE164, "ordersCount": d.Customer.OrdersCount},
 		"bank":     map[string]any{"bankCode": d.Bank.BankCode, "accountNumber": d.Bank.AccountNumber, "holderName": d.Bank.HolderName},
 		"batch": map[string]any{
@@ -152,9 +152,19 @@ func orderJSON(d service.OrderDetail) map[string]any {
 			"pickupSlots": slotJSON(d.Batch.PickupSlots, d.Store.Timezone),
 		},
 		"pickupSlotLabel": pickupLabel(d),
-		"store": map[string]any{"name": d.Store.Name, "address": d.Store.Address, "isOpen": d.Store.IsOpen, "timezone": d.Store.Timezone},
-		"brand":    map[string]any{"name": d.Brand.Name, "slug": d.Brand.Slug, "waNumber": d.Brand.WaNumber},
+		"store":           map[string]any{"name": d.Store.Name, "address": d.Store.Address, "isOpen": d.Store.IsOpen, "timezone": d.Store.Timezone},
+		"brand":           map[string]any{"name": d.Brand.Name, "slug": d.Brand.Slug, "waNumber": d.Brand.WaNumber},
+		"notices":         noticesJSON(d.Notices),
+		"refundDue":       d.RefundDue,
 	}
+}
+
+func noticesJSON(notes []service.CustomerNotice) []any {
+	out := []any{}
+	for _, n := range notes {
+		out = append(out, map[string]any{"kind": n.Kind, "title": n.Title, "body": n.Body})
+	}
+	return out
 }
 
 func pickupLabel(d service.OrderDetail) any {

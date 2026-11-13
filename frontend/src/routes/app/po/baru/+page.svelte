@@ -11,7 +11,14 @@
 	let brandId = $state('');
 	let products = $state<any[]>([]);
 	let title = $state('PO baru');
-	let quota = $state(50);
+	let quota = $state('');
+	let minQty = $state('');
+	let minRp = $state('');
+	let maxCust = $state('');
+	let capOrders = $state('');
+	let minProceed = $state('');
+	let lead = $state('');
+	let waitlist = $state(false);
 	let pickup = $state(true);
 	let delivery = $state(true);
 	let notes = $state('');
@@ -30,6 +37,20 @@
 		brandId = b.id;
 		tz = b.stores?.[0]?.timezone || 'Asia/Jakarta';
 		products = await api('/api/v1/brands/' + brandId + '/products');
+		try {
+			const rules = await api<any>('/api/v1/brands/' + brandId + '/capacity');
+			const eff = rules.stores?.[0]?.effective || rules.brand || {};
+			quota = eff.capacityQty ?? '';
+			minQty = eff.minQty ?? '';
+			minRp = eff.minAmountRp ?? '';
+			maxCust = eff.maxQtyPerCustomer ?? '';
+			capOrders = eff.capacityOrders ?? '';
+			minProceed = eff.minProceedQty ?? '';
+			lead = eff.cutoffLeadMinutes ?? '';
+			waitlist = !!eff.waitlistEnabled;
+		} catch {
+			/* defaults stay empty, server still inherits */
+		}
 		for (const p of products) if (p.active) picked[p.id] = true;
 		opens = presetWall(0, 8, 0, tz);
 		closes = presetWall(1, 20, 0, tz);
@@ -47,6 +68,7 @@
 					return;
 				}
 			}
+			const num = (v: string) => (v === '' || v == null ? null : Number(v));
 			const items = products.filter((p) => picked[p.id]).map((p) => ({ productId: p.id, price: p.price, quota: null }));
 			const batch = await api<any>('/api/v1/brands/' + brandId + '/batches', {
 				method: 'POST',
@@ -57,7 +79,16 @@
 					readyAt: wallToISO(snapWall(ready), tz),
 					pickupSlots,
 					paymentDeadlineAt: payBy ? wallToISO(snapWall(payBy), tz) : null,
-					quotaTotal: quota, allowPickup: pickup, allowDelivery: delivery, notes, publish, items
+					quotaTotal: num(quota),
+					rulesSet: true,
+					minQty: num(minQty),
+					minAmountRp: num(minRp),
+					maxQtyPerCustomer: num(maxCust),
+					capacityOrders: num(capOrders),
+					minProceedQty: num(minProceed),
+					cutoffLeadMinutes: num(lead),
+					waitlistEnabled: waitlist,
+					allowPickup: pickup, allowDelivery: delivery, notes, publish, items
 				})
 			});
 			localStorage.setItem('pn_push_asked', localStorage.getItem('pn_push_asked') || '');
@@ -85,7 +116,16 @@
 		{/each}
 		<button type="button" class="text-xs font-extrabold text-od" onclick={() => (slots = [...slots, { start: ready, end: ready }])}>+ Slot</button>
 		<DateTimeField label="Batas bayar" bind:value={payBy} {tz} optional />
-		<label class="text-xs font-extrabold text-ink2">{c.quota}<input class="mt-1 h-10 w-full rounded-xl border border-line px-2" type="number" bind:value={quota} /></label>
+		<label class="text-xs font-extrabold text-ink2">Kuota pcs<input class="mt-1 h-10 w-full rounded-xl border border-line px-2" type="number" placeholder="kosong = tanpa batas" bind:value={quota} /></label>
+		<div class="grid grid-cols-2 gap-2">
+			<label class="text-xs font-extrabold text-ink2">Min pcs<input class="mt-1 h-10 w-full rounded-xl border border-line px-2" type="number" bind:value={minQty} /></label>
+			<label class="text-xs font-extrabold text-ink2">Min Rp<input class="mt-1 h-10 w-full rounded-xl border border-line px-2" type="number" bind:value={minRp} /></label>
+			<label class="text-xs font-extrabold text-ink2">Maks / orang<input class="mt-1 h-10 w-full rounded-xl border border-line px-2" type="number" bind:value={maxCust} /></label>
+			<label class="text-xs font-extrabold text-ink2">Kuota pesanan<input class="mt-1 h-10 w-full rounded-xl border border-line px-2" type="number" bind:value={capOrders} /></label>
+			<label class="text-xs font-extrabold text-ink2">Min lanjut<input class="mt-1 h-10 w-full rounded-xl border border-line px-2" type="number" bind:value={minProceed} /></label>
+			<label class="text-xs font-extrabold text-ink2">Lead menit<input class="mt-1 h-10 w-full rounded-xl border border-line px-2" type="number" bind:value={lead} /></label>
+		</div>
+		<label class="flex items-center gap-2 text-sm font-extrabold"><input type="checkbox" bind:checked={waitlist} /> Buka daftar tunggu</label>
 		<label class="flex items-center gap-2 text-sm font-extrabold"><input type="checkbox" bind:checked={pickup} /> {c.pickup}</label>
 		<label class="flex items-center gap-2 text-sm font-extrabold"><input type="checkbox" bind:checked={delivery} /> {c.delivery}</label>
 		<textarea class="w-full rounded-xl border border-line p-2" rows="2" bind:value={notes} placeholder={c.note}></textarea>

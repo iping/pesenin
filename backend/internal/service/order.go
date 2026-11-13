@@ -37,15 +37,17 @@ type PlaceOrder struct {
 }
 
 type OrderDetail struct {
-	Order    db.Order
-	Items    []db.OrderItem
-	Charges  []db.OrderCharge
-	Customer db.Customer
-	Bank     db.BankAccount
-	Proofs   []db.PaymentProof
-	Batch    db.PoBatch
-	Store    db.Store
-	Brand    db.Brand
+	Order     db.Order
+	Items     []db.OrderItem
+	Charges   []db.OrderCharge
+	Customer  db.Customer
+	Bank      db.BankAccount
+	Proofs    []db.PaymentProof
+	Batch     db.PoBatch
+	Store     db.Store
+	Brand     db.Brand
+	Notices   []CustomerNotice
+	RefundDue bool
 }
 
 type Quote struct {
@@ -54,6 +56,17 @@ type Quote struct {
 	Extra    int64
 	Base     int64
 	Lines    []CartItem
+	Problems []string
+	Limits   QuoteLimits
+}
+
+// QuoteLimits is the cart hint for mins, maxes, and what is left.
+type QuoteLimits struct {
+	MinQty            *int32
+	MinAmountRp       *int64
+	MaxQtyPerCustomer *int32
+	RemainingQty      *int32
+	RemainingOrders   *int32
 }
 
 func applicableCharges(charges []db.ExtraCharge, method string) []db.ExtraCharge {
@@ -69,7 +82,7 @@ func applicableCharges(charges []db.ExtraCharge, method string) []db.ExtraCharge
 	return out
 }
 
-func (a *App) Quote(ctx context.Context, code string, method string, items []CartItem) (Quote, error) {
+func (a *App) Quote(ctx context.Context, code string, method string, items []CartItem, wa string, slotIndex int) (Quote, error) {
 	batch, err := a.Q.GetBatchByCode(ctx, code)
 	if err != nil {
 		return Quote{}, err
@@ -87,7 +100,21 @@ func (a *App) Quote(ctx context.Context, code string, method string, items []Car
 	for _, c := range applied {
 		extra += c.AmountRp
 	}
-	return Quote{Subtotal: sub, Charges: applied, Extra: extra, Base: sub + extra, Lines: lines}, nil
+	var slot *time.Time
+	slots := ParseSlots(batch.PickupSlots)
+	if len(slots) > 0 && slotIndex >= 0 && slotIndex < len(slots) {
+		t := slots[slotIndex].Start
+		slot = &t
+	}
+	view, _ := a.viewFor(ctx, a.Pool, batch)
+	return Quote{
+		Subtotal: sub, Charges: applied, Extra: extra, Base: sub + extra, Lines: lines,
+		Problems: a.PreviewProblems(ctx, batch, lines, sub, wa, slot),
+		Limits: QuoteLimits{
+			MinQty: view.MinQty, MinAmountRp: view.MinAmountRp, MaxQtyPerCustomer: view.MaxQtyPerCustomer,
+			RemainingQty: view.RemainingQty, RemainingOrders: view.RemainingOrders,
+		},
+	}, nil
 }
 
 func (a *App) priceLines(ctx context.Context, batchID uuid.UUID, items []CartItem) ([]CartItem, int64, error) {
@@ -161,6 +188,9 @@ func (a *App) PlaceOrder(ctx context.Context, code string, in PlaceOrder) (db.Or
 		if err != nil {
 			return err
 		}
+		if err := lockCapacityRows(ctx, tx, b.ID); err != nil {
+			return err
+		}
 		if b.Status != "open" {
 			return E(409, "batch_closed", "PO ini sudah ditutup.")
 		}
@@ -180,23 +210,6 @@ func (a *App) PlaceOrder(ctx context.Context, code string, in PlaceOrder) (db.Or
 		lines, sub, err := priceLocked(ctx, q, b.ID, in.Items)
 		if err != nil {
 			return err
-		}
-		if b.QuotaTotal != nil {
-			var sold int32
-			rows, err := q.ListBatchItems(ctx, b.ID)
-			if err != nil {
-				return err
-			}
-			for _, r := range rows {
-				sold += r.SoldCount
-			}
-			var add int32
-			for _, l := range lines {
-				add += l.Qty
-			}
-			if sold+add > *b.QuotaTotal {
-				return E(409, "quota", "Kuota PO ini tinggal sedikit. Kurangi jumlahnya ya.")
-			}
 		}
 		charges, err := q.ListActiveCharges(ctx, b.BrandID)
 		if err != nil {
@@ -250,6 +263,9 @@ func (a *App) PlaceOrder(ctx context.Context, code string, in PlaceOrder) (db.Or
 			}
 			slotStart = &slots[idx].Start
 			slotEnd = &slots[idx].End
+		}
+		if err := applyCapacity(ctx, tx, b, cust.ID, lines, sub, slotStart); err != nil {
+			return err
 		}
 		var order db.Order
 		for try := 0; try < 5; try++ {
@@ -324,12 +340,25 @@ func (a *App) PlaceOrder(ctx context.Context, code string, in PlaceOrder) (db.Or
 				return err
 			}
 		}
-		if err := maybeCloseBatch(ctx, q, b.ID); err != nil {
+		convertWaitlist(ctx, tx, b.ID, wa)
+		if err := syncFullness(ctx, q, tx, b.ID); err != nil {
 			return err
 		}
 		created = order
 		return nil
 	})
+	if err != nil {
+		var e *Error
+		if errors.As(err, &e) && a.countsAsOversell(ctx, batch.ID, e.Code) {
+			var want int32
+			for _, it := range in.Items {
+				if it.Qty > 0 {
+					want += it.Qty
+				}
+			}
+			a.recordIncident(ctx, batch.BrandID, batch.StoreID, batch.ID, "oversell_blocked", want)
+		}
+	}
 	if errors.Is(err, errIdempotent) && in.IdempotencyKey != "" {
 		key := in.IdempotencyKey
 		return a.Q.GetOrderByIdempotency(ctx, &key)
@@ -428,42 +457,6 @@ func paymentExpiry(now, closes time.Time, mins *int32, absolute *time.Time, defa
 	return &deadline
 }
 
-func maybeCloseBatch(ctx context.Context, q *db.Queries, batchID uuid.UUID) error {
-	b, err := q.GetBatch(ctx, batchID)
-	if err != nil {
-		return err
-	}
-	items, err := q.ListBatchItems(ctx, batchID)
-	if err != nil {
-		return err
-	}
-	var sold int32
-	allLimited := true
-	allGone := true
-	for _, it := range items {
-		sold += it.SoldCount
-		if it.Quota == nil {
-			allLimited = false
-			allGone = false
-			continue
-		}
-		if it.SoldCount < *it.Quota {
-			allGone = false
-		}
-	}
-	closeIt := false
-	if b.QuotaTotal != nil && sold >= *b.QuotaTotal {
-		closeIt = true
-	}
-	if allLimited && allGone && len(items) > 0 {
-		closeIt = true
-	}
-	if closeIt && b.Status == "open" {
-		_, err = q.SetBatchStatus(ctx, db.SetBatchStatusParams{ID: batchID, Status: "closed"})
-	}
-	return err
-}
-
 func (a *App) LoadOrder(ctx context.Context, id uuid.UUID) (OrderDetail, error) {
 	o, err := a.Q.GetOrder(ctx, id)
 	if err != nil {
@@ -516,7 +509,11 @@ func (a *App) hydrate(ctx context.Context, o db.Order) (OrderDetail, error) {
 	if err != nil {
 		return OrderDetail{}, err
 	}
-	return OrderDetail{Order: o, Items: items, Charges: charges, Customer: cust, Bank: bank, Proofs: proofs, Batch: batch, Store: store, Brand: brand}, nil
+	notices, refund, err := a.OrderExtras(ctx, o.ID)
+	if err != nil {
+		return OrderDetail{}, err
+	}
+	return OrderDetail{Order: o, Items: items, Charges: charges, Customer: cust, Bank: bank, Proofs: proofs, Batch: batch, Store: store, Brand: brand, Notices: notices, RefundDue: refund}, nil
 }
 
 func (a *App) SaveProof(ctx context.Context, token string, r io.Reader, mime string, size int) error {
@@ -532,7 +529,7 @@ func (a *App) SaveProof(ctx context.Context, token string, r io.Reader, mime str
 	var brandID uuid.UUID
 	var code string
 	var name string
-	err := a.tx(ctx, func(q *db.Queries) error {
+	err := a.txConn(ctx, func(q *db.Queries, tx pgx.Tx) error {
 		o, err := q.GetOrderByTokenForUpdate(ctx, token)
 		if errors.Is(err, pgx.ErrNoRows) {
 			return E(404, "not_found", "Pesanan tidak ketemu.")
@@ -543,6 +540,7 @@ func (a *App) SaveProof(ctx context.Context, token string, r io.Reader, mime str
 		if !orderflow.CanUploadProof(o.PaymentStatus) {
 			return E(409, "bad_state", "Pesanan ini sudah tidak menerima bukti.")
 		}
+		wasPending := o.PaymentStatus == "pending"
 		ext := "jpg"
 		if mime == "image/png" {
 			ext = "png"
@@ -560,6 +558,11 @@ func (a *App) SaveProof(ctx context.Context, token string, r io.Reader, mime str
 		}
 		if _, err := q.MarkOrderProof(ctx, o.ID); err != nil {
 			return err
+		}
+		if wasPending {
+			if err := noteConfirmed(ctx, q, tx, o, 1); err != nil {
+				return err
+			}
 		}
 		orderID, brandID, code = o.ID, o.BrandID, o.Code
 		cust, err := q.GetCustomer(ctx, o.CustomerID)
@@ -580,7 +583,7 @@ func (a *App) SaveProof(ctx context.Context, token string, r io.Reader, mime str
 func (a *App) MarkPaid(ctx context.Context, actor, orderID uuid.UUID) (db.Order, error) {
 	var out db.Order
 	var brandID uuid.UUID
-	err := a.tx(ctx, func(q *db.Queries) error {
+	err := a.txConn(ctx, func(q *db.Queries, tx pgx.Tx) error {
 		o, err := q.GetOrderForUpdate(ctx, orderID)
 		if err != nil {
 			return err
@@ -592,6 +595,7 @@ func (a *App) MarkPaid(ctx context.Context, actor, orderID uuid.UUID) (db.Order,
 		if !orderflow.CanPay(o.PaymentStatus) {
 			return E(409, "bad_state", "Pesanan ini tidak bisa ditandai lunas.")
 		}
+		wasPending := o.PaymentStatus == "pending"
 		settings, err := a.LoadSettings(ctx)
 		if err != nil {
 			return err
@@ -612,6 +616,11 @@ func (a *App) MarkPaid(ctx context.Context, actor, orderID uuid.UUID) (db.Order,
 		})
 		if err != nil {
 			return err
+		}
+		if wasPending {
+			if err := noteConfirmed(ctx, q, tx, o, 1); err != nil {
+				return err
+			}
 		}
 		if err := q.AddCustomerSpend(ctx, db.AddCustomerSpendParams{ID: o.CustomerID, TotalSpent: o.TotalDue}); err != nil {
 			return err
@@ -653,7 +662,7 @@ func (a *App) RejectProof(ctx context.Context, actor, orderID uuid.UUID, reason 
 		return db.Order{}, E(400, "need_reason", "Isi alasan penolakan.")
 	}
 	var out db.Order
-	err := a.tx(ctx, func(q *db.Queries) error {
+	err := a.txConn(ctx, func(q *db.Queries, tx pgx.Tx) error {
 		o, err := q.GetOrderForUpdate(ctx, orderID)
 		if err != nil {
 			return err
@@ -669,6 +678,9 @@ func (a *App) RejectProof(ctx context.Context, actor, orderID uuid.UUID, reason 
 		}); err != nil {
 			return err
 		}
+		if err := noteConfirmed(ctx, q, tx, o, -1); err != nil {
+			return err
+		}
 		out, err = q.SetOrderPayment(ctx, db.SetOrderPaymentParams{ID: o.ID, PaymentStatus: "pending"})
 		return err
 	})
@@ -677,7 +689,9 @@ func (a *App) RejectProof(ctx context.Context, actor, orderID uuid.UUID, reason 
 
 func (a *App) CancelOrder(ctx context.Context, actor, orderID uuid.UUID) (db.Order, error) {
 	var out db.Order
-	err := a.tx(ctx, func(q *db.Queries) error {
+	var notified int
+	var brandID uuid.UUID
+	err := a.txConn(ctx, func(q *db.Queries, tx pgx.Tx) error {
 		o, err := q.GetOrderForUpdate(ctx, orderID)
 		if err != nil {
 			return err
@@ -690,6 +704,7 @@ func (a *App) CancelOrder(ctx context.Context, actor, orderID uuid.UUID) (db.Ord
 			return E(409, "bad_state", "Pesanan ini tidak bisa dibatalkan.")
 		}
 		now := time.Now()
+		brandID = o.BrandID
 		if o.PaymentStatus == "paid" {
 			if !o.PaidAt.Valid || !refundOK(o.PaidAt.Time, now) {
 				return E(409, "refund_window", "Pengembalian koin cuma berlaku 24 jam setelah lunas.")
@@ -713,9 +728,11 @@ func (a *App) CancelOrder(ctx context.Context, actor, orderID uuid.UUID) (db.Ord
 			}
 		}
 		if orderflow.ReleasesQuota(o.PaymentStatus) {
-			if err := releaseItems(ctx, q, o.ID); err != nil {
+			n, err := releaseOrderHold(ctx, q, tx, o)
+			if err != nil {
 				return err
 			}
+			notified = n
 		}
 		out, err = q.SetOrderPayment(ctx, db.SetOrderPaymentParams{
 			ID: o.ID, PaymentStatus: "cancelled", PaidAt: o.PaidAt, ChargedAt: o.ChargedAt, CancelledAt: pgt(now),
@@ -726,24 +743,14 @@ func (a *App) CancelOrder(ctx context.Context, actor, orderID uuid.UUID) (db.Ord
 		a.audit(ctx, q, &acc.ID, &actor, "order.cancel", "order", o.ID.String(), map[string]string{"status": o.PaymentStatus}, map[string]string{"status": "cancelled"})
 		return nil
 	})
+	if err == nil {
+		a.pingWaitlist(ctx, brandID, out.BatchID, notified)
+	}
 	return out, err
 }
 
 func refundOK(paidAt, now time.Time) bool {
 	return !now.After(paidAt.Add(24 * time.Hour))
-}
-
-func releaseItems(ctx context.Context, q *db.Queries, orderID uuid.UUID) error {
-	items, err := q.ListOrderItems(ctx, orderID)
-	if err != nil {
-		return err
-	}
-	for _, it := range items {
-		if err := q.ReleaseSoldCount(ctx, db.ReleaseSoldCountParams{ID: it.BatchItemID, SoldCount: it.Qty}); err != nil {
-			return err
-		}
-	}
-	return nil
 }
 
 func (a *App) SetFulfilment(ctx context.Context, actor, orderID uuid.UUID, to string) (db.Order, error) {

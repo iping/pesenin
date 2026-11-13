@@ -159,8 +159,9 @@ LIMIT 200;
 SELECT * FROM orders WHERE batch_id = $1 ORDER BY created_at;
 
 -- name: ListDueOrders :many
+-- Only orders that still have no transfer proof. Uploading proof keeps the capacity reservation.
 SELECT * FROM orders
-WHERE payment_status IN ('pending', 'proof_submitted')
+WHERE payment_status = 'pending'
   AND expires_at IS NOT NULL
   AND expires_at <= now()
 LIMIT 100;

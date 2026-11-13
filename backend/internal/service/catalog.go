@@ -294,16 +294,22 @@ func (a *App) SaveCharge(ctx context.Context, userID, brandID uuid.UUID, chargeI
 }
 
 type BatchItemIn struct {
-	ProductID uuid.UUID
-	VariantID *uuid.UUID
-	Price     int64
-	Quota     *int32
+	ProductID          uuid.UUID
+	VariantID          *uuid.UUID
+	Price              int64
+	Quota              *int32
+	MinQty             *int32
+	MaxPerCustomer     *int32
+	SkipProductDefault bool
 }
 
 // Slot is one pickup window. Times are absolute; the label is rendered in the store zone.
+// Capacity fields are stored on pickup_capacities, not inside the slot JSON.
 type Slot struct {
-	Start time.Time `json:"start"`
-	End   time.Time `json:"end"`
+	Start          time.Time `json:"start"`
+	End            time.Time `json:"end"`
+	CapacityQty    *int32    `json:"capacityQty,omitempty"`
+	CapacityOrders *int32    `json:"capacityOrders,omitempty"`
 }
 
 type BatchIn struct {
@@ -321,6 +327,18 @@ type BatchIn struct {
 	Notes             string
 	Publish           bool
 	Items             []BatchItemIn
+	// RulesSet means the request is the whole rule for this batch.
+	// Empty limits are unlimited for this batch. When false, brand and store defaults apply.
+	RulesSet          bool
+	MinQty            *int32
+	MinAmountRp       *int64
+	MaxQtyPerCustomer *int32
+	CapacityOrders    *int32
+	MinProceedQty     *int32
+	CutoffLeadMinutes *int32
+	WaitlistEnabled   *bool
+	// Snapshot, when set, is copied as-is (duplicate). It wins over defaults.
+	Snapshot *capRule
 }
 
 func normalizeBatch(in *BatchIn) error {
@@ -362,7 +380,11 @@ func normalizeBatch(in *BatchIn) error {
 }
 
 func marshalSlots(slots []Slot) (json.RawMessage, error) {
-	b, err := json.Marshal(slots)
+	clean := make([]Slot, len(slots))
+	for i, s := range slots {
+		clean[i] = Slot{Start: s.Start, End: s.End}
+	}
+	b, err := json.Marshal(clean)
 	if err != nil {
 		return nil, err
 	}
@@ -428,10 +450,19 @@ func (a *App) CreateBatch(ctx context.Context, userID, brandID uuid.UUID, in Bat
 		}
 	}
 	var batch db.PoBatch
-	err = a.tx(ctx, func(q *db.Queries) error {
+	err = a.txConn(ctx, func(q *db.Queries, tx pgx.Tx) error {
 		code, err := uniqueBatchCode(ctx, q)
 		if err != nil {
 			return err
+		}
+		rule, err := resolveNewBatch(ctx, tx, brandID, store.ID, in)
+		if err != nil {
+			return err
+		}
+		if in.QuotaTotal == nil {
+			in.QuotaTotal = rule.CapacityQty
+		} else {
+			rule.CapacityQty = in.QuotaTotal
 		}
 		rawSlots, err := marshalSlots(in.PickupSlots)
 		if err != nil {
@@ -447,7 +478,13 @@ func (a *App) CreateBatch(ctx context.Context, userID, brandID uuid.UUID, in Bat
 		if err != nil {
 			return err
 		}
-		return insertBatchItems(ctx, q, batch.ID, brandID, in.Items)
+		if err := saveBatchRule(ctx, tx, batch.ID, rule); err != nil {
+			return err
+		}
+		if err := savePickupCaps(ctx, tx, batch.ID, in.PickupSlots); err != nil {
+			return err
+		}
+		return insertBatchItems(ctx, q, tx, batch.ID, brandID, in.Items)
 	})
 	return batch, err
 }
@@ -468,7 +505,13 @@ func (a *App) UpdateBatch(ctx context.Context, userID, batchID uuid.UUID, in Bat
 		return db.PoBatch{}, err
 	}
 	var batch db.PoBatch
-	err = a.tx(ctx, func(q *db.Queries) error {
+	err = a.txConn(ctx, func(q *db.Queries, tx pgx.Tx) error {
+		if _, err := q.GetBatchForUpdate(ctx, cur.ID); err != nil {
+			return err
+		}
+		if err := guardQtyFloor(ctx, tx, cur.ID, in.QuotaTotal); err != nil {
+			return err
+		}
 		status := cur.Status
 		if in.Publish && (status == "draft" || status == "scheduled") {
 			if in.OpensAt.After(time.Now()) {
@@ -497,7 +540,7 @@ func (a *App) UpdateBatch(ctx context.Context, userID, batchID uuid.UUID, in Bat
 		if err := q.DeleteBatchItems(ctx, cur.ID); err != nil {
 			return err
 		}
-		return insertBatchItems(ctx, q, cur.ID, cur.BrandID, in.Items)
+		return insertBatchItems(ctx, q, tx, cur.ID, cur.BrandID, in.Items)
 	})
 	return batch, err
 }
@@ -522,9 +565,19 @@ func (a *App) SetBatchOpen(ctx context.Context, userID, batchID uuid.UUID, open 
 		if !cur.ClosesAt.After(time.Now()) {
 			return db.PoBatch{}, E(400, "batch_closed", "Perpanjang dulu waktu tutupnya, baru dibuka lagi.")
 		}
-		return a.Q.SetBatchStatus(ctx, db.SetBatchStatusParams{ID: cur.ID, Status: "open"})
+		b, err := a.Q.SetBatchStatus(ctx, db.SetBatchStatusParams{ID: cur.ID, Status: "open"})
+		if err != nil {
+			return db.PoBatch{}, err
+		}
+		a.markClosedReason(ctx, cur.ID, "")
+		return b, nil
 	}
-	return a.Q.SetBatchStatus(ctx, db.SetBatchStatusParams{ID: cur.ID, Status: "closed"})
+	b, err := a.Q.SetBatchStatus(ctx, db.SetBatchStatusParams{ID: cur.ID, Status: "closed"})
+	if err != nil {
+		return db.PoBatch{}, err
+	}
+	a.markClosedReason(ctx, cur.ID, "seller")
+	return b, nil
 }
 
 func (a *App) DuplicateBatch(ctx context.Context, userID, batchID uuid.UUID) (db.PoBatch, error) {
@@ -547,18 +600,36 @@ func (a *App) DuplicateBatch(ctx context.Context, userID, batchID uuid.UUID) (db
 		t := now.Add(cur.PaymentDeadlineAt.Time.Sub(cur.OpensAt))
 		deadline = &t
 	}
+	rule, _, err := a.loadBatchRule(ctx, a.Pool, cur.ID)
+	if err != nil {
+		return db.PoBatch{}, err
+	}
+	caps, err := loadPickupCaps(ctx, a.Pool, cur.ID)
+	if err != nil {
+		return db.PoBatch{}, err
+	}
+	limits, err := loadItemLimits(ctx, a.Pool, cur.ID)
+	if err != nil {
+		return db.PoBatch{}, err
+	}
 	var slots []Slot
 	for _, s := range ParseSlots(cur.PickupSlots) {
-		slots = append(slots, Slot{
+		ns := Slot{
 			Start: now.Add(s.Start.Sub(cur.OpensAt)),
 			End:   now.Add(s.End.Sub(cur.OpensAt)),
-		})
+		}
+		if c, ok := matchSlot(caps, s.Start); ok {
+			ns.CapacityQty = c.CapacityQty
+			ns.CapacityOrders = c.CapacityOrders
+		}
+		slots = append(slots, ns)
 	}
 	in := BatchIn{
 		StoreID: cur.StoreID, Title: cur.Title, OpensAt: now, ClosesAt: now.Add(span),
 		ReadyAt: now.Add(ready), PickupSlots: slots,
 		DeadlineMins: cur.PaymentDeadlineMins, PaymentDeadlineAt: deadline, QuotaTotal: cur.QuotaTotal,
 		AllowPickup: cur.AllowPickup, AllowDelivery: cur.AllowDelivery, Notes: cur.Notes, Publish: false,
+		Snapshot: &rule,
 	}
 	for _, it := range items {
 		var vid *uuid.UUID
@@ -566,12 +637,16 @@ func (a *App) DuplicateBatch(ctx context.Context, userID, batchID uuid.UUID) (db
 			id := uuid.UUID(it.VariantID.Bytes)
 			vid = &id
 		}
-		in.Items = append(in.Items, BatchItemIn{ProductID: it.ProductID, VariantID: vid, Price: it.Price, Quota: it.Quota})
+		lim := limits[it.ID]
+		in.Items = append(in.Items, BatchItemIn{
+			ProductID: it.ProductID, VariantID: vid, Price: it.Price, Quota: it.Quota,
+			MinQty: lim.MinQty, MaxPerCustomer: lim.MaxPerCustomer, SkipProductDefault: true,
+		})
 	}
 	return a.CreateBatch(ctx, userID, cur.BrandID, in)
 }
 
-func insertBatchItems(ctx context.Context, q *db.Queries, batchID, brandID uuid.UUID, items []BatchItemIn) error {
+func insertBatchItems(ctx context.Context, q *db.Queries, tx pgx.Tx, batchID, brandID uuid.UUID, items []BatchItemIn) error {
 	for i, it := range items {
 		p, err := q.GetProduct(ctx, it.ProductID)
 		if err != nil {
@@ -609,11 +684,36 @@ func insertBatchItems(ctx context.Context, q *db.Queries, batchID, brandID uuid.
 		if price < 0 {
 			return E(400, "bad_item", "Harga tidak boleh minus.")
 		}
-		if _, err := q.InsertBatchItem(ctx, db.InsertBatchItemParams{
+		quota, minQ, maxQ := it.Quota, it.MinQty, it.MaxPerCustomer
+		if !it.SkipProductDefault {
+			cap, pr, err := productRuleQuota(ctx, tx, p.ID)
+			if err != nil {
+				return err
+			}
+			if quota == nil {
+				quota = cap
+			}
+			if minQ == nil {
+				minQ = pr.MinQty
+			}
+			if maxQ == nil {
+				maxQ = pr.MaxPerCustomer
+			}
+		}
+		row, err := q.InsertBatchItem(ctx, db.InsertBatchItemParams{
 			BatchID: batchID, ProductID: p.ID, VariantID: vid, ProductName: name, VariantName: vname,
-			Price: price, Quota: it.Quota, SortOrder: int32(i),
-		}); err != nil {
+			Price: price, Quota: quota, SortOrder: int32(i),
+		})
+		if err != nil {
 			return err
+		}
+		if minQ != nil || maxQ != nil {
+			if _, err := tx.Exec(ctx, `
+				INSERT INTO batch_item_limits (batch_item_id, min_qty, max_qty_per_customer)
+				VALUES ($1, $2, $3)
+			`, row.ID, minQ, maxQ); err != nil {
+				return err
+			}
 		}
 	}
 	return nil
