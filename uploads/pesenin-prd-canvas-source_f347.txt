@@ -1,0 +1,2237 @@
+<cursor_untrusted_data_1337 source="ReadCanvas">
+
+Canvas "Pesenin PRD: PO-first Order Tool (Phased roadmap, MVP v1)" (https://cursor.com/canvas/store-85ba294f-cb10-4583-8cbb-aa4258c96db9/f602438a-e6a0-469b-8ae9-cc5e168e41ba):
+
+import {
+  Page,
+  Section,
+  Text,
+  Callout,
+  Table,
+  BulletList,
+  NumberedList,
+  Steps,
+  Properties,
+  Diagram,
+  CodeBlock,
+  Grid,
+  TableOfContents,
+  Equation,
+  Frac,
+} from "grok/canvas";
+
+const toc = [
+  { label: "Phased roadmap and GTM (start here)", id: "roadmap" },
+  { label: "Brand: logo and Pingping", id: "brand" },
+  { label: "1. Overview and problem", id: "overview" },
+  { label: "2. Goals and non-goals", id: "goals" },
+  { label: "3. Personas", id: "personas" },
+  { label: "4. Success metrics", id: "metrics" },
+  { label: "5. Account, Brand and Store model", id: "tenancy" },
+  { label: "6. User journeys", id: "journeys" },
+  { label: "7. Functional requirements", id: "fr" },
+  { label: "8. Key user stories and acceptance criteria", id: "stories" },
+  { label: "9. State machines", id: "states" },
+  { label: "10. Unique-amount algorithm", id: "unique" },
+  { label: "11. Order total and custom extra charges", id: "charges" },
+  { label: "12. Seller campaigns", id: "campaigns" },
+  { label: "13. Unique URLs and QR codes", id: "links" },
+  { label: "14. Store hours and mobile stores", id: "hours" },
+  { label: "15. Push notifications", id: "notifications" },
+  { label: "16. Sharing and community", id: "sharing" },
+  { label: "17. Light gamification", id: "game" },
+  { label: "18. Verified reviews and Pesenin grade", id: "reviews" },
+  { label: "19. Customer Trust Grade", id: "trust" },
+  { label: "20. Koin wallet and top-up", id: "billing" },
+  { label: "21. Data model", id: "data" },
+  { label: "22. REST API outline", id: "api" },
+  { label: "23. Tech stack and architecture", id: "stack" },
+  { label: "24. Hosting and monthly cost", id: "cost" },
+  { label: "25. Non-functional requirements", id: "nfr" },
+  { label: "26. Scope by phase", id: "scope" },
+  { label: "27. Release plan (Phase 1, 10 weeks)", id: "release" },
+  { label: "28. Risks and open questions", id: "risks" },
+];
+
+const personas: string[][] = [
+  ["Rina, home PO seller (primary)", "Sells salt bread and kopi susu literan from home, 1 to 3 PO batches a week, 50 to 300 orders a month, takes orders in WhatsApp and Google Forms", "Checking dozens of transfers by hand, retyping recaps for production, chasing unpaid customers"],
+  ["Dimas, customer (guest by default)", "Orders from Rina's link on a mid-range Android phone, often inside the WhatsApp or Instagram in-app browser; may sign in with Google to keep history", "Wants to order in under a minute, know exactly how much to transfer, know if the store is open, and not retype his details"],
+  ["Pak Budi, mobile seller (phase 2)", "Sells from a gerobak kopi around offices and housing blocks", "Customers cannot find him; delivery costs kill small orders"],
+  ["Sari, multi-brand owner", "Runs a bread brand and a juice brand, with two pickup points (home and office lobby)", "Needs separate links, menus and bank accounts per brand, one place to pay us"],
+  ["Andi, jastip runner (phase 2)", "Buys coffee and breakfast for coworkers or a campus group most mornings and adds a fee", "Collecting orders and money from 10 to 30 people before 7am"],
+  ["Small cafe (phase 3)", "Takes catering and office pre-orders next to walk-in sales", "Needs stock and walk-in POS, out of MVP scope"],
+];
+
+const metricRows: string[][] = [
+  ["North star: paid orders per month", "Orders that reached paid status in the calendar month", "8.000 by month 3, 40.000 by month 6, 200.000 by month 12"],
+  ["Activation speed", "Median time from first Google sign-in to first shareable PO link", "Under 2 minutes"],
+  ["Activation rate", "Share of new accounts that publish a PO link within 24 hours", "60% or more"],
+  ["First-order rate", "Share of activated sellers who receive 1 or more paid orders in 7 days", "50% or more"],
+  ["Paid-match rate", "Share of paid orders whose transfer matched the unique amount", "80% or more"],
+  ["Weekly active sellers", "Accounts with 1 or more paid orders in the last 7 days", "Grows week over week; 1.600 by month 12"],
+  ["Top-up conversion", "Share of sellers who top up after using the 5.000 free koin", "30 to 40%"],
+  ["Average top-up", "Mean top-up amount, excluding admin fee", "Rp 50.000 or more"],
+  ["Verification time", "Median time from proof upload to approve or reject", "Under 2 hours in working hours; under 12 hours overall"],
+  ["Top-up rejection rate", "Share of submitted top-ups rejected", "Under 5%"],
+  ["Koin usage revenue", "Koin consumed by order_debit in the month (1 koin = Rp 1)", "Rp 20 million a month by month 12"],
+  ["Customer order time", "Median time from opening the link to order submitted", "Under 60 seconds"],
+  ["Orders by source", "Share of paid orders carrying a ?src tag, by channel (ig, wa, tiktok, print)", "30% tagged by month 6"],
+  ["QR adoption", "Share of activated sellers who download a QR within 14 days", "40% or more"],
+  ["Store hours set", "Share of active stores with weekly hours configured", "70% or more"],
+  ["Campaign usage", "Share of paid orders with a campaign, and average order value against non-campaign orders", "Tracked; no target in MVP"],
+  ["Extra slots", "Paid brand and store slots bought per month", "Tracked to set the price"],
+  ["Customer sign-up rate", "Share of guest customers who create an account after ordering", "10% or more"],
+  ["Push opt-in rate", "Share of active sellers and of ordering customers with at least one live subscription", "Sellers 60% or more; customers 20% or more"],
+  ["Push click-through", "Share of delivered pushes that are tapped", "25% or more for seller events"],
+  ["Push delivery success", "Sends accepted by the push service, excluding expired subscriptions", "95% or more"],
+  ["Proof-to-paid time", "Median time from proof upload to Tandai Lunas", "Under 30 minutes for sellers with push on"],
+  ["Shares per PO (P2)", "Share card or link shares per published batch, and orders arriving with ?ref=", "2 or more shares per PO; 10% of orders with ref by month 6"],
+  ["Referral activation (P2)", "Invited sellers who reach 20 paid orders", "30% or more"],
+  ["Streak retention (P2)", "Sellers with a 4-week streak, and their 8-week retention against others", "Tracked; no target yet"],
+  ["Review rate (P2)", "Reviews per completed order", "15% or more"],
+  ["Stores with a grade (P2)", "Active stores with 5 or more reviews", "30% by month 6"],
+  ["Seller reply rate (P2)", "Reviews with a seller reply within 7 days", "50% or more"],
+  ["Review report rate (P2)", "Reviews reported, and share hidden after moderation", "Under 2% reported"],
+  ["No-show rate (P2)", "Paid orders not picked up, per seller and overall", "Measured in P1 beta; 30% lower for sellers using the grade after 3 months"],
+  ["Trusted share (P2)", "Share of paid orders from Terpercaya or Langganan Setia customers", "Tracked"],
+  ["Trust disputes (P3)", "Appeals per 1.000 trust events, and share upheld", "Under 5 per 1.000; upheld share reviewed monthly"],
+  ["Mobile stores (phase 2)", "Live sessions per week, stop-request acceptance rate, median response time", "Acceptance 60% or more; response under 5 minutes"],
+];
+
+const levelRows: string[][] = [
+  ["Account", "The owner user, Koin wallet, top-ups, koin ledger, (phase 2) team members", "One Koin wallet shared by all brands, so the seller tops up once and never juggles balances"],
+  ["Brand", "Name, public slug, logo, brand WhatsApp number, bank accounts, products and variants, message templates, customers", "Each brand looks and sells like its own shop and has its own customer list"],
+  ["Store", "Name, slug, pickup address, maps link, weekly hours and open status, time zone, store type (fixed, or mobile in phase 2), optional bank-account override, PO batches", "A branch, outlet, or pickup point. Every brand gets a default Store called Utama so single-location sellers never see the concept"],
+  ["PO batch", "Belongs to one Store. Selected products with batch price and per-item quota, open and cutoff time, ready date, fulfilment options", "The unit customers order against"],
+  ["Order", "Belongs to one batch, links to one brand customer", "Charged Rp 100 to the account wallet when it becomes paid"],
+];
+
+const roleRows: string[][] = [
+  ["Owner", "MVP", "Everything in the account: brands, stores, money, wallet, settings"],
+  ["Brand admin", "Phase 2", "Everything inside one brand except wallet top-up and deleting the brand"],
+  ["Store staff", "Phase 2", "Sees and updates orders, recap and checklist for assigned Stores only; cannot see bank details or wallet"],
+  ["Super admin (us)", "MVP", "Internal flag on users; verifies top-ups, sets the admin fee and top-up presets, adjusts koin with a reason, views reports, suspends abuse"],
+];
+
+const frRows: (string | { text: string; tone?: "success" | "warning" | "danger" })[][] = [
+  ["AUTH-1", "Sign in with Google (OAuth 2.0 + OpenID Connect), account auto-created on first sign-in", "Must"],
+  ["AUTH-2", "Session cookie that lasts 30 days, logout, logout everywhere", "Must"],
+  ["AUTH-3", "Detect in-app browsers (Instagram, WhatsApp, TikTok) and show an Open in Chrome prompt before Google sign-in", "Must"],
+  ["AUTH-4", "Email magic-link sign-in as a fallback", "Should"],
+  ["AUTH-5", "Sign in with Apple", "Could"],
+  ["ONB-1", "3-step onboarding: brand name and slug, bank account, first product, then open first PO", "Must"],
+  ["ONB-2", "Default Store Utama created silently with each brand", "Must"],
+  ["TEN-1", "Create, edit, archive multiple brands under one account; brand switcher in the header", "Should (P2)"],
+  ["TEN-2", "Create, edit, archive Stores per brand with their own slug and pickup info", "Should (P2)"],
+  ["TEN-3", "Slug validation per section 13: a-z, 0-9 and hyphens, 3 to 30 characters, unique, not reserved", "Must"],
+  ["SLOT-1", "1 brand and 1 store free per account", "Must"],
+  ["SLOT-2", "Extra brand or store paid once in koin (fee shown before confirming, price in platform settings, freed slots reusable)", "Should (P2)"],
+  ["SLOT-3", "Monthly slot billing mode", "Could (phase 2)"],
+  ["URL-1", "Unique editable slug URL for every brand and store, availability check while typing", "Must"],
+  ["URL-2", "Old slugs 301-redirect for 90 days after a rename and stay reserved", "Should (P2)"],
+  ["QR-1", "QR for any brand, store or PO batch link with PNG download (screen and print sizes)", "Must"],
+  ["QR-2", "Copy link and share to WhatsApp", "Must"],
+  ["QR-3", "SVG download, social templates (story, post, A6 stand), brand colour", "Should"],
+  ["QR-4", "?src channel tag on QR links and an orders-by-source report", "Should"],
+  ["QR-5", "Stable /q/ QR links that survive slug renames", "Could (phase 2)"],
+  ["HRS-1", "Weekly hours per store with multiple ranges per day, store time zone (default Asia/Jakarta)", "Should (P2)"],
+  ["HRS-2", "Special dates: holidays, closures, special hours", "Should (P2)"],
+  ["HRS-3", "One-tap Buka or Tutup toggle per store (P1); optional reason and auto-revert time (P2)", "Must"],
+  ["HRS-4", "Status on brand, store, QR landing and batch pages: Buka or Tutup from the toggle (P1); Segera tutup and Buka pukul HH:MM from weekly hours (P2)", "Must"],
+  ["HRS-5", "Accept pre-orders while closed toggle", "Must"],
+  ["HRS-6", "Reminder when a store still shows Buka after scheduled closing", "Should"],
+  ["MOB-1", "Store type mobile with planned route spots", "Could (P3)"],
+  ["MOB-2", "Go live: PWA geolocation every 30 to 60 s while selling, auto-stop after inactivity", "Could (P3)"],
+  ["MOB-3", "Public live map with last update and rough ETA (SSE, polling fallback)", "Could (P3)"],
+  ["MOB-4", "Stop requests with pin, note and optional order; accept or decline; nearby requests grouped", "Could (P3)"],
+  ["MOB-5", "Accepted stop becomes a meeting point that waives or reduces delivery charges", "Could (P3)"],
+  ["MOB-6", "Ikuti and notify when nearby (web push)", "Could (P3)"],
+  ["CMP-1", "Campaigns with period, minimum order, percent or fixed discount, auto-applied, brand or batch scope", "Should (P2)"],
+  ["CMP-2", "One campaign per order (largest discount wins), snapshot on the order", "Should (P2)"],
+  ["CMP-3", "Free ongkir and free item rewards; store or product scope", "Should"],
+  ["CMP-4", "Campaign report: orders, revenue, discount, average order value", "Should"],
+  ["CMP-5", "Redemption limits, per-customer limits, promo codes", "Could (P3)"],
+  ["CUST-1", "Guest checkout through the seller link is the default; no account needed", "Must"],
+  ["CUST-2", "Optional customer sign-up with Google, offered before or after ordering", "Should (P2)"],
+  ["CUST-3", "Signed-in customers get order history across Pesenin sellers and saved name, WhatsApp and addresses autofilled", "Should (P2)"],
+  ["CUST-4", "Guest orders placed on the same device are linked to the new account", "Should"],
+  ["DISC-1", "Discover: stores near me, open-now filter, categories, favorites", "Could (P3)"],
+  ["BANK-1", "Up to 3 bank or e-wallet accounts per brand (bank name, number, holder name), one default", "Must"],
+  ["BANK-2", "Store-level bank override", "Should"],
+  ["CAT-1", "Products with name, photo, base price, description, active flag", "Must"],
+  ["CAT-2", "Variants (size, flavour) with their own price delta", "Must"],
+  ["CAT-3", "Add-ons and option groups (extra shot, less sugar)", "Could"],
+  ["PO-1", "Create PO batch: title, Store, products with batch price and quota, open time, cutoff time, ready date, pickup and or delivery", "Must"],
+  ["PO-2", "Batch auto-opens and auto-closes at the set times; manual open and close", "Must"],
+  ["PO-3", "Overall quota and per-item quota; item shows Habis when sold out", "Must"],
+  ["PO-4", "Duplicate a past batch in one tap", "Must"],
+  ["PO-5", "Waitlist when quota is reached", "Could"],
+  ["PUB-1", "Public brand page, Store page and batch order page, server-rendered with WhatsApp link preview (title, image)", "Must"],
+  ["PUB-2", "Customer orders with name and WhatsApp number only; no account", "Must"],
+  ["PUB-3", "Order status page with unguessable link, payment instructions and copy buttons", "Must"],
+  ["PAY-1", "Unique amount per order (3-digit suffix), shown large with a copy button", "Must"],
+  ["PAY-2", "Customer uploads transfer proof; image compressed in the browser before upload", "Must"],
+  ["PAY-3", "Seller marks paid (with or without proof), rejects a proof with a reason, or cancels", "Must"],
+  ["PAY-4", "Search orders by exact amount, to match a line in the seller's bank app", "Must"],
+  ["PAY-5", "Optional payment deadline; unpaid orders expire and release quota", "Must"],
+  ["PAY-6", "Show a static QRIS image uploaded by the seller", "Should"],
+  ["OPS-1", "Production recap per batch: totals per product and variant, paid only, with an include-unpaid toggle", "Must"],
+  ["OPS-2", "Shopping list from optional ingredients per product (amount per unit)", "Should"],
+  ["OPS-3", "Pickup and delivery checklist: mark ready, mark picked up or delivered", "Must"],
+  ["OPS-4", "Export recap and orders to CSV and a printable page", "Should"],
+  ["WA-1", "Click-to-send WhatsApp links (wa.me) for confirmation, payment reminder, ready notice", "Must"],
+  ["WA-2", "Editable templates per brand with variables", "Should"],
+  ["CUS-1", "Customer list per brand keyed by normalised WhatsApp number, with order count, total spent, last order", "Must"],
+  ["CUS-2", "Broadcast helper: list of wa.me links for PO opens tomorrow", "Could"],
+  ["CHG-1", "Brand-level extra charges with a seller-chosen name (Ongkir, Packing, Kantong plastik, Biaya layanan or any label) and a fixed Rp amount per order", "Must"],
+  ["CHG-2", "Limit a charge to a fulfilment method (for example Ongkir only when delivery is chosen)", "Must"],
+  ["CHG-3", "Each charge shown as its own line in the order page summary, status page, seller order detail, recap and WhatsApp templates", "Must"],
+  ["CHG-4", "Charge values snapshotted on the order (order_charges); later edits never change existing orders", "Must"],
+  ["CHG-5", "Fixed charge per item or quantity, and per specific product (for example Kantong plastik Rp 500 per cup)", "Should"],
+  ["CHG-6", "Override or switch off a brand charge per Store or per PO batch", "Should"],
+  ["CHG-7", "Percentage charges (for example Biaya layanan 2%) with an optional maximum", "Could (phase 2)"],
+  ["CHG-8", "Conditions: waive above a minimum order, or when a campaign gives free ongkir", "Could (phase 2)"],
+  ["CHG-9", "Optional charges the customer opts into (for example Bungkus kado), with a default on or off", "Could (phase 2)"],
+  ["KOIN-1", "Koin wallet per account (1 koin = Rp 1), shared by all brands; balance badge on every seller screen", "Must"],
+  ["KOIN-2", "5.000 free koin (50 orders) as promo_free_credit on sign-up", "Must"],
+  ["KOIN-3", "Deduct 100 koin as order_debit once per order on first transition to paid", "Must"],
+  ["KOIN-4", "Top-up presets Rp 25.000, Rp 50.000, Rp 100.000 plus custom amount (min Rp 25.000, max Rp 1.000.000, multiples of Rp 1.000); no bonus tiers", "Must"],
+  ["KOIN-5", "Admin fee from the active config, shown as a line item before confirming, added on top, snapshotted on the top-up", "Must"],
+  ["KOIN-6", "Manual transfer to the platform bank with unique amount, proof upload, 24-hour expiry", "Must"],
+  ["KOIN-7", "Top-up history (status, fee, koin received) and a ledger of every koin movement", "Must"],
+  ["KOIN-8", "Low-balance warning under 500 koin; grace floor -5.000 koin with soft lock; orders never blocked", "Must"],
+  ["KOIN-9", "Email and in-app notifications for approved, rejected and expiring top-ups", "Should"],
+  ["KOIN-10", "Payment gateway or dynamic QRIS top-up with instant credit", "Could (P4)"],
+  ["ADM-1", "Super admin top-up queue: proof viewer, expected vs received amount, approve (optionally with corrected amount) or reject with reason", "Must"],
+  ["ADM-2", "One fixed admin fee per top-up, set in platform settings and shown before confirming", "Must"],
+  ["ADM-2b", "Admin fee config: fixed and or percentage, min and max cap, per channel, effective-date versions", "Should (P2)"],
+  ["ADM-3", "Platform settings: top-up presets, custom min, max and multiple, expiry hours, order fee, free koin, grace floor, low-balance threshold, extra brand and store fees, slot billing mode", "Must"],
+  ["ADM-4", "Manual koin adjustment (plus or minus) with required reason, written to ledger and audit log", "Must"],
+  ["ADM-5", "Reports: top-ups, admin fees, koin issued and used, koin liability, revenue by day and month, CSV export", "Must"],
+  ["ADM-6", "Audit log of money, settings and status changes", "Must"],
+  ["ADM-7", "Account lookup and suspend", "Should"],
+  ["APP-1", "Installable PWA with offline app shell and Add to Home Screen prompt", "Must"],
+  ["NOTIF-1", "Web Push via service worker and VAPID for new order and transfer proof uploaded", "Must"],
+  ["NOTIF-1b", "Push for PO near quota or cutoff, PO closed or sold out, low koin, top-up result", "Should (P2)"],
+  ["NOTIF-2", "In-app notification center with unread badge and deep links", "Must"],
+  ["NOTIF-3", "iOS install prompt (16.4+ home screen only) and soft permission prompt at a meaningful moment", "Must"],
+  ["NOTIF-4", "Outbox and worker with batching, rate limits, dedupe and dead-subscription cleanup", "Must"],
+  ["NOTIF-5", "Per-user preferences per event and channel, quiet hours", "Should (P2)"],
+  ["NOTIF-6", "Customer order-status push for signed-in customers and opted-in guests", "Should"],
+  ["NOTIF-7", "Email backup for top-up approved or rejected", "Should"],
+  ["NOTIF-8", "Opt-in marketing push: PO opening at favorite store, store opened, campaign start, pickup reminders", "Could (P3)"],
+  ["NOTIF-9", "Stop request push for mobile stores", "Could (P3)"],
+  ["SHR-1", "Share cards for PO and store (story and feed sizes) through the Web Share API, fallback download and wa.me", "Should (P2)"],
+  ["SHR-2", "Open Graph preview images for brand, store and PO links", "Must"],
+  ["SHR-3", "Moment cards: sold out, badges, grade", "Should (P2)"],
+  ["SHR-4", "Customer share with personal ?ref= code, snapshotted on the order", "Should (P2)"],
+  ["SHR-5", "Seller referral: both get koin after the invited seller's 20th paid order, anti self-referral, monthly cap; Made with Pesenin footer", "Should (P2)"],
+  ["SHR-6", "Kumpul offline events and pickup spots with RSVP; Patungan group orders; community pages", "Could (P3)"],
+  ["GAME-1", "PO progress bar and countdown on seller and public pages", "Should (P2)"],
+  ["GAME-2", "Sold-out celebration with share card", "Should (P2)"],
+  ["GAME-3", "Six achievements with capped koin rewards (10.000 koin a month)", "Should (P2)"],
+  ["GAME-4", "Weekly PO streak with reminder", "Should (P2)"],
+  ["GAME-5", "Koin chest animation", "Could (P2)"],
+  ["GAME-6", "Shop map, levels and customer stamps", "Could (P3)"],
+  ["REV-1", "Review only for paid and completed orders, one per order, 14-day window, guests via order token", "Should (P2)"],
+  ["REV-2", "1 to 3 Mangkok rating with labels Oke, Enak, Wajib coba plus optional 280-character text", "Should (P2)"],
+  ["REV-3", "Store and brand grade shown after 5 or more reviews on store page, QR landing and share cards", "Should (P2)"],
+  ["REV-4", "Review invites through status page, push and wa.me template", "Should (P2)"],
+  ["REV-5", "One public seller reply per review; sellers cannot edit or delete reviews", "Should (P2)"],
+  ["REV-6", "Report review and super admin moderation queue (keep, hide, remove)", "Should (P2)"],
+  ["REV-7", "Anti-fraud: self-review flag by phone or account, rate limits, ineligible manual or cancelled orders", "Should (P2)"],
+  ["REV-8", "Review photo and quick tags (Enak, Tepat waktu, Packing rapi, Ramah, Sesuai foto)", "Could (P3)"],
+  ["REV-9", "Recency-weighted grade", "Could (P3)"],
+  ["REV-10", "Pesenin Pick badge for consistently 3-Mangkok stores", "Could (P3)"],
+  ["TRUST-1", "Customer identity by normalised WhatsApp number, linked to Google account when signed in", "Should (P2)"],
+  ["TRUST-2", "Basic grade from completed paid orders and no-shows: Baru, Terpercaya, Langganan Setia", "Should (P2)"],
+  ["TRUST-3", "Grade chip and stats on seller order detail and inbox", "Should (P2)"],
+  ["TRUST-4", "Mark no-show with reason code, max 5 a day per seller; single-seller events stay local until confirmed", "Should (P2)"],
+  ["TRUST-5", "Customer sees own level, stats and tips", "Should (P2)"],
+  ["TRUST-6", "Private Perlu perhatian flag for sellers only", "Should (P2)"],
+  ["TRUST-7", "Advanced score with on-time payment, late cancels, fake proofs, seller thumbs feedback and 180-day decay", "Could (P3)"],
+  ["TRUST-8", "Seller rules: require prepayment or DP by level; opt-in auto-decline below a level", "Could (P3)"],
+  ["TRUST-9", "Dispute and appeal flow with admin queue", "Could (P3)"],
+  ["TRUST-10", "Customer trust badges and stamps", "Could (P3)"],
+  ["BRAND-1", "Grey Pingping placeholder images (1:1, 16:9, circle, #EEEEEE) when no photo is uploaded", "Must"],
+  ["BRAND-2", "Animated logo: idle loop and intro pop-in on splash; celebration koin rain on top-up approved and new order", "Should"],
+  ["BRAND-3", "Push and empty-state copy in Pingping's voice starting with Ping!; tagline Hungry? Ping me / Laper? Ping aja! on landing page and QR materials", "Should"],
+  ["BRAND-4", "Ping me follow button on store pages with push when the store opens or starts a new PO", "Could (P3)"],
+  ["I18N-1", "Bahasa Indonesia first; English toggle", "Must"],
+];
+
+const dataRows: string[][] = [
+  ["users", "id (uuid), email, name, avatar_url, google_sub (unique), is_platform_admin, created_at", "One person; Google identity lives here"],
+  ["auth_identities", "id, user_id, provider (google, apple, email), provider_subject, unique(provider, provider_subject)", "Lets you add Apple or email later without migrations on users"],
+  ["sessions", "id (random 32 bytes, hashed), user_id, expires_at, user_agent, ip, created_at", "Server-side sessions, revocable"],
+  ["accounts", "id, owner_user_id, name, status (active, suspended), brand_slots, store_slots, created_at", "Seller billing and ownership container; created on first seller sign-in only, never for customer-only users"],
+  ["customer_profiles", "user_id (pk), name, wa_number_e164, created_at", "Optional customer account; one user can be both customer and seller"],
+  ["customer_addresses", "id, user_id, label, address, lat, lng, note, is_default", "Saved delivery addresses for autofill"],
+  ["slot_purchases", "id, account_id, slot_type (brand, store), fee_koin, billing_mode, wallet_transaction_id, assigned_entity_id (nullable), created_at", "A freed slot keeps its row with assigned_entity_id cleared"],
+  ["account_members", "account_id, user_id, role (owner, brand_admin, store_staff), brand_id, store_id", "MVP has only owner rows; phase 2 adds staff"],
+  ["brands", "id, account_id, name, slug (unique), logo_url, wa_number, description, status, created_at", "Public at pesenin.product.biz.id/{slug}"],
+  ["stores", "id, brand_id, name, slug, address, lat, lng, maps_url, timezone (default Asia/Jakarta), store_type (fixed, mobile), accept_preorders_when_closed, location_precision (exact, approx), bank_account_id (nullable override), is_default, archived_at, unique(brand_id, slug)", "Branch, outlet, pickup point or cart"],
+  ["store_hours", "id, store_id, weekday (0 to 6, nullable), date_from, date_to (nullable, for special dates), opens_at, closes_at, is_closed, note", "Several rows per day allowed; date rows override weekday rows"],
+  ["store_status_overrides", "id, store_id, status (open, closed), reason, starts_at, ends_at (nullable = until next scheduled change), created_by", "Latest active override wins"],
+  ["slug_history", "id, entity_type (brand, store), entity_id, brand_id, old_slug, new_slug, changed_by, changed_at, redirect_until, reserved_until", "Drives 301 redirects and reservations"],
+  ["qr_assets", "id, brand_id, target_type (brand, store, batch), target_id, src, template, color, short_code (unique, phase 2), download_count, created_by, created_at", "Optional; counts downloads and powers the rename warning"],
+  ["campaigns", "id, brand_id, name, banner_text, status, starts_at, ends_at, min_subtotal_rp, reward_type (percent, fixed, free_ongkir, free_item), percent_bps, amount_rp, max_discount_rp, free_product_id, free_variant_id, free_qty, total_limit, per_customer_limit, code", "Limits and code are phase 2"],
+  ["campaign_scopes", "campaign_id, scope_type (batch, store, product), scope_id", "No rows means the whole brand"],
+  ["store_route_spots", "id, store_id, weekday, starts_at, ends_at, name, lat, lng", "Phase 2, mobile stores"],
+  ["store_locations", "store_id (pk), lat, lng, accuracy_m, updated_at, live_session_id", "Phase 2; latest point only, deleted when live ends"],
+  ["live_sessions", "id, store_id, started_at, ended_at, end_reason", "Phase 2; no coordinates kept"],
+  ["stop_requests", "id, store_id, public_token, customer_id, user_id, name, wa_number_e164, lat, lng, note, order_id, status (pending, accepted, declined, expired, completed, cancelled), eta_minutes, decline_reason, group_key, created_at, responded_at, purge_at", "Phase 2; pins purged 7 days after close"],
+  ["customer_favorites", "user_id, store_id, created_at", "Phase 2, Discover"],
+  ["bank_accounts", "id, brand_id, bank_code, account_number, holder_name, is_default, active", "Where customers transfer; shown on order page"],
+  ["products", "id, brand_id, name, description, photo_url, base_price, active, sort_order", "Brand menu"],
+  ["product_variants", "id, product_id, name, price_delta, active", "Size, flavour"],
+  ["ingredients", "id, product_id, variant_id (nullable), name, qty_per_unit, unit", "Feeds the shopping list (Should)"],
+  ["po_batches", "id, store_id, brand_id, code (short, unique), title, status, opens_at, closes_at, ready_at, payment_deadline_mins, quota_total, allow_pickup, allow_delivery, notes", "Brand_id denormalised for fast queries"],
+  ["batch_items", "id, batch_id, product_id, variant_id, price, quota, sold_count", "Price frozen per batch"],
+  ["customers", "id, brand_id, name, wa_number_e164, first_order_at, last_order_at, orders_count, total_spent, unique(brand_id, wa_number_e164)", "Per brand, created on first order"],
+  ["orders", "id, batch_id, brand_id, store_id, customer_id, code, public_token, user_id (nullable), source, ref_code, campaign_id, campaign_snapshot (jsonb), stop_request_id (phase 2), subtotal, discount_total, extra_charges_total, base_total, unique_suffix, total_due, bank_account_id, payment_status, fulfilment_status, fulfilment_method, address, note, expires_at, paid_at, charged_at, created_at", "Partial unique index on (bank_account_id, total_due) while payment_status in (pending, proof_submitted)"],
+  ["order_items", "id, order_id, batch_item_id, product_name, variant_name, unit_price, qty, is_free_item", "Names copied so history survives menu edits"],
+  ["payment_proofs", "id, order_id, object_key, mime, size_bytes, uploaded_at, review_status, reject_reason, reviewed_by", "Images in R2; deleted after 90 days"],
+  ["wallets", "id, account_id (unique), balance_koin (bigint, cached), version, updated_at", "One per account; balance updated in the same transaction as the ledger row (row lock) and reconciled nightly against the ledger sum"],
+  ["wallet_transactions", "id, wallet_id, type (promo_free_credit, topup_credit, order_debit, slot_purchase, refund_credit, referral_reward, achievement_reward, adjustment), amount_koin (signed), balance_after, idempotency_key (unique), order_id, topup_id, brand_id, actor_user_id, reason, created_at", "Append-only, never updated or deleted; keys like order_debit:{order_id} and topup_credit:{topup_id} make retries safe"],
+  ["topups", "id, account_id, code, channel (manual_transfer), amount_rp, unique_suffix, admin_fee_rp, total_due_rp, koin_to_credit, fee_config_id, fee_fixed_rp, fee_percent_bps, platform_bank_account_id, status (pending, awaiting_verification, approved, rejected, expired), proof_key, expires_at, submitted_at, received_amount_rp, reviewed_by, reviewed_at, reject_reason, idempotency_key", "Fee snapshot frozen at creation; partial unique index on (platform_bank_account_id, total_due_rp) while pending or awaiting_verification"],
+  ["admin_fee_configs", "id, channel (manual_transfer, gateway_qris, gateway_va), fixed_rp, percent_bps, min_fee_rp, max_fee_rp (nullable), effective_from, created_by, note, created_at", "Immutable versions; the active one is the latest effective_from not in the future for that channel"],
+  ["platform_settings", "key (primary key), value (jsonb), updated_by, updated_at", "topup_presets, custom_min, custom_max, custom_multiple, topup_expiry_hours, order_fee_koin, signup_free_koin, grace_floor_koin, low_balance_koin, extra_brand_fee_koin, extra_store_fee_koin, slot_billing_mode, slug_redirect_days; every change audited"],
+  ["platform_bank_accounts", "id, bank_code, account_number, holder_name, active", "Our receiving accounts for top-ups"],
+  ["extra_charges", "id, brand_id, scope_type (brand, store, batch), scope_id, overrides_charge_id (nullable), name, amount_type (fixed, percent), amount_rp, percent_bps, max_amount_rp, apply_level (per_order, per_item, per_product), fulfilment_methods (pickup, delivery), waive_min_subtotal_rp, waivable_by_campaign, waive_for_meeting_point, meeting_point_amount_rp, is_optional, default_selected, is_disabled, sort_order, active", "Brand defaults plus Store and batch rows that override (overrides_charge_id) or add charges; max 10 active per brand"],
+  ["extra_charge_products", "extra_charge_id, product_id", "Products a per_product charge applies to"],
+  ["order_charges", "id, order_id, extra_charge_id, name, amount_type, amount_rp, percent_bps, apply_level, basis_qty, basis_amount_rp, computed_rp, waived, waive_reason, opted_in, sort_order", "Snapshot per order; recap sums computed_rp by name"],
+  ["push_subscriptions", "id, user_id (nullable), order_token (nullable, guest), endpoint (unique), p256dh, auth, platform, user_agent, created_at, last_success_at, failure_count, expires_at", "One row per device; deleted on 404 or 410"],
+  ["notifications", "id, recipient_user_id, recipient_order_token, account_id, brand_id, event_type, title, body, deep_link, data (jsonb), dedupe_key (unique), group_key, status (pending, held_quiet, batched, sent, failed), attempts, scheduled_at, sent_at, read_at, created_at", "Outbox for the worker and the in-app center in one table"],
+  ["notification_preferences", "user_id, event_type ('*' for defaults), push_enabled, inapp_enabled, email_enabled, quiet_start, quiet_end, timezone", "Marketing events default to off"],
+  ["reviews (P2)", "id, order_id (unique), store_id, brand_id, user_id (nullable), order_token, customer_phone_hash, rating (1 to 3), body (max 280), photo_key (P3), status (published, pending_moderation, hidden, removed), self_review_suspected, edit_count, created_at, edited_at", "One per order; insert allowed only when the order is paid and completed within 14 days"],
+  ["review_tags (P3)", "review_id, tag (enak, tepat_waktu, packing_rapi, ramah, sesuai_foto)", "Quick tags"],
+  ["review_replies (P2)", "review_id (unique), author_user_id, body, created_at, edited_at", "One seller reply per review"],
+  ["review_reports (P2)", "id, review_id, reporter_user_id, reason, note, status (open, kept, hidden, removed), resolved_by, resolved_at", "Moderation queue"],
+  ["store_ratings (P2)", "scope_type (store, brand), scope_id, review_count, avg_rating, weighted_avg (P3), count_1, count_2, count_3, grade_label, pesenin_pick_since (P3), updated_at", "Recomputed by the worker on every review change"],
+  ["referrals (P2)", "id, referrer_account_id, referred_account_id (unique), code, status (pending, qualified, rejected), reward_koin, qualified_at, reject_reason", "Seller referral; accounts get referral_code"],
+  ["achievements (P2)", "code, name, description, rule (jsonb), reward_koin, active", "Seeded list of six badges"],
+  ["account_achievements (P2)", "account_id, code, brand_id, unlocked_at, unique(account_id, code)", "Idempotent unlocks; streak computed from batches"],
+  ["events, event_stores, event_rsvps (P3)", "id, host_account_id, slug, name, starts_at, ends_at, place_name, lat, lng", "Kumpul offline events and pickup spots"],
+  ["customer_trust_scores (P2)", "identity_key (phone hash, primary key), user_id (nullable), level, score (P3), completed_orders, no_shows, on_time_payments, late_cancels, rejected_proofs, distinct_sellers, attention_flag, computed_at", "Recomputed by the worker after each trust event"],
+  ["trust_events (P2)", "id, identity_key, order_id, brand_id, type (completed, no_show, on_time_payment, late_cancel, fake_proof), reason_code, weight, verified, confirmed_by_second_seller, voided_at, dispute_id, created_at", "Kept 12 months; voided events excluded"],
+  ["seller_customer_feedback (P3)", "id, order_id (unique), brand_id, identity_key, thumb (up, down), reason_code, created_at", "Private; counts only with 3 or more sellers"],
+  ["disputes (P3)", "id, trust_event_id, identity_key, user_id, message, evidence_key, status (open, upheld, rejected), resolved_by, resolved_at", "Appeal queue"],
+  ["message_templates", "id, brand_id, kind (confirmation, reminder, ready, review_request), body", "Defaults seeded per brand"],
+  ["audit_logs", "id, account_id, actor_user_id, action, entity_type, entity_id, before (jsonb), after (jsonb), ip, created_at", "Money, status and settings changes"],
+];
+
+const apiRows: string[][] = [
+  ["GET", "/v1/auth/google/start", "Redirect to Google with state, nonce and PKCE"],
+  ["GET", "/v1/auth/google/callback", "Verify ID token, upsert user, create session cookie, redirect to app"],
+  ["POST", "/v1/auth/logout", "Delete session"],
+  ["GET", "/v1/me", "User, account, brands, wallet balance"],
+  ["GET POST", "/v1/brands", "List and create brands (creates default Store)"],
+  ["GET PATCH", "/v1/brands/{brandId}", "Read and update brand"],
+  ["GET", "/v1/slugs/check?type=brand|store&slug=&brandId=", "Availability, reason and up to 3 suggestions while typing"],
+  ["PATCH", "/v1/brands/{brandId}/slug | /v1/stores/{storeId}/slug", "Rename; writes slug_history and starts the 90-day redirect"],
+  ["GET", "/v1/account/slots", "Free and paid slots, current fees"],
+  ["POST", "/v1/brands, /v1/brands/{brandId}/stores with confirm_fee_koin", "Returns 402 slot_required with the fee when no slot is free; confirming debits and creates in one transaction"],
+  ["GET POST", "/v1/brands/{brandId}/stores", "List and create Stores"],
+  ["PATCH", "/v1/stores/{storeId}", "Update or archive a Store"],
+  ["GET POST", "/v1/brands/{brandId}/bank-accounts", "List and add bank accounts"],
+  ["GET POST", "/v1/brands/{brandId}/products", "Menu, with variants inline"],
+  ["PATCH", "/v1/products/{productId}", "Update product and variants"],
+  ["GET POST", "/v1/stores/{storeId}/batches", "List and create PO batches"],
+  ["PATCH", "/v1/batches/{batchId}", "Edit batch (items locked once orders exist)"],
+  ["POST", "/v1/batches/{batchId}/open | /close | /duplicate", "Manual status actions"],
+  ["GET", "/v1/batches/{batchId}/recap | /shopping-list | /checklist", "Production views (soft-locked below grace floor)"],
+  ["GET", "/v1/batches/{batchId}/orders?status=&amount=", "Order inbox, search by exact amount"],
+  ["POST", "/v1/orders/{orderId}/mark-paid | /reject-proof | /mark-ready | /complete | /cancel", "Seller order actions"],
+  ["GET", "/v1/orders/{orderId}/wa-link?template=", "Returns a filled wa.me URL"],
+  ["GET", "/v1/brands/{brandId}/customers", "Customer history"],
+  ["GET PUT", "/v1/brands/{brandId}/templates", "WhatsApp templates"],
+  ["GET POST", "/v1/brands/{brandId}/campaigns", "List and create campaigns"],
+  ["PATCH", "/v1/campaigns/{id}", "Edit (existing orders keep their snapshot)"],
+  ["POST", "/v1/campaigns/{id}/pause | /resume | /end", "Status actions"],
+  ["GET", "/v1/campaigns/{id}/report", "Orders, revenue, discount, average order value"],
+  ["POST", "/v1/qr", "Log a QR download (target, src, template); the image is drawn in the browser"],
+  ["GET", "/v1/qr/{id}.png?size=", "Server-rendered PNG with skip2/go-qrcode (Should)"],
+  ["GET", "/v1/brands/{brandId}/reports/sources?from=&to=", "Orders and revenue by source"],
+  ["GET PUT", "/v1/stores/{storeId}/hours", "Weekly hours and special dates"],
+  ["POST DELETE", "/v1/stores/{storeId}/status-override", "Buka sekarang or Tutup sementara with reason and until; DELETE clears"],
+  ["POST", "/v1/stores/{storeId}/live/start | /stop | /location", "Phase 2: go live, stop, send a point (rate limited to 1 per 20 s)"],
+  ["GET PUT", "/v1/stores/{storeId}/route-spots", "Phase 2: planned spots"],
+  ["GET", "/v1/stores/{storeId}/stop-requests?status=pending", "Phase 2: seller list with groups"],
+  ["POST", "/v1/stop-requests/{id}/accept | /decline | /complete", "Phase 2: accept with ETA, decline with reason"],
+  ["GET PUT", "/v1/me/customer-profile, /v1/me/addresses", "Customer saved details"],
+  ["GET", "/v1/push/vapid-public-key", "Public key for the browser subscription"],
+  ["POST DELETE", "/v1/push/subscriptions[/{id}]", "Register or remove this device for the signed-in user"],
+  ["POST", "/v1/public/orders/{token}/push-subscriptions", "Guest Kabari saya opt-in tied to the order"],
+  ["POST", "/v1/push/test", "Send a test push to my devices"],
+  ["GET", "/v1/notifications?cursor= | /v1/notifications/unread-count", "Notification center"],
+  ["POST", "/v1/notifications/read", "Mark ids or all as read"],
+  ["GET PUT", "/v1/me/notification-preferences", "Per-event toggles and quiet hours"],
+  ["GET", "/v1/share-cards/{type}/{id}.png?size=story|feed", "Rendered share card (cached); also used as Open Graph image"],
+  ["GET", "/v1/me/referrals", "P2: my referral code, invited sellers and rewards"],
+  ["GET", "/v1/me/achievements", "P2: unlocked badges, progress and streak"],
+  ["GET", "/v1/public/orders/{token}/review-eligibility", "P2: eligible, window end, existing review"],
+  ["POST PUT DELETE", "/v1/public/orders/{token}/review", "P2: create, edit once, or delete my review (guest token or session)"],
+  ["GET", "/v1/public/stores/{slug}/reviews?cursor= | /v1/public/brands/{slug}/reviews", "P2: published reviews and grade summary"],
+  ["GET", "/v1/brands/{id}/reviews?unreplied=true", "P2: seller review inbox"],
+  ["POST PUT", "/v1/reviews/{id}/reply", "P2: one seller reply, editable 24 hours"],
+  ["POST", "/v1/reviews/{id}/report", "P2: report with reason"],
+  ["GET", "/v1/admin/review-reports?status=open", "P2: moderation queue"],
+  ["POST", "/v1/admin/reviews/{id}/keep | /hide | /remove", "P2: moderation decision (audited)"],
+  ["GET", "/v1/brands/{id}/customers/{customerId}/trust", "P2: level and stats (also embedded in order detail)"],
+  ["POST", "/v1/orders/{id}/no-show", "P2: mark not picked up with reason code"],
+  ["GET", "/v1/me/trust | /v1/public/orders/{token}/trust", "P2: my level, stats and events"],
+  ["POST", "/v1/orders/{id}/customer-feedback", "P3: private thumbs up or down"],
+  ["POST", "/v1/me/trust/disputes", "P3: appeal a trust event"],
+  ["GET POST", "/v1/admin/disputes[/{id}/uphold | /reject]", "P3: appeal queue"],
+  ["GET PUT", "/v1/brands/{id}/trust-rules", "P3: prepayment or DP by level, auto-decline threshold"],
+  ["GET", "/v1/me/orders?cursor=", "Customer order history across sellers"],
+  ["POST", "/v1/me/orders/claim", "Link guest order tokens stored on this device"],
+  ["GET POST", "/v1/brands/{brandId}/extra-charges", "List and create brand-default extra charges"],
+  ["PATCH DELETE", "/v1/extra-charges/{chargeId}", "Edit or archive a charge (existing orders keep their snapshot)"],
+  ["GET PUT", "/v1/stores/{storeId}/extra-charges | /v1/batches/{batchId}/extra-charges", "Store or batch overrides; GET returns the resolved effective set"],
+  ["POST", "/v1/public/batches/{code}/quote", "Cart, fulfilment method and opted-in charges in; line-by-line breakdown out (no order created)"],
+  ["GET", "/v1/wallet", "Balance in koin, order equivalent, low-balance and lock flags"],
+  ["GET", "/v1/wallet/transactions?cursor=", "Koin ledger"],
+  ["GET", "/v1/topups/options", "Presets, custom rules and the active admin fee"],
+  ["POST", "/v1/topups/quote", "Amount in; fee, total and koin out (creates nothing)"],
+  ["GET POST", "/v1/topups", "History; create top-up (Idempotency-Key), snapshots fee and unique amount"],
+  ["POST", "/v1/topups/{id}/proof-url | /submit", "Presigned upload, then move to awaiting_verification"],
+  ["GET", "/v1/public/brands/{slug}[/stores/{storeSlug}]", "Public brand or Store with open batches, hours, active override, computed status and active campaigns; returns redirect_to for an old slug"],
+  ["GET", "/v1/public/stores/{storeId}/live", "Phase 2: Server-Sent Events stream of location updates"],
+  ["GET", "/v1/public/stores/{storeId}/location", "Phase 2: polling fallback"],
+  ["POST", "/v1/public/stores/{storeId}/stop-requests, GET /v1/public/stop-requests/{token}", "Phase 2: request a stop and follow its status"],
+  ["GET", "/v1/public/batches/{code}", "Public batch with items and remaining quota"],
+  ["POST", "/v1/public/batches/{code}/orders", "Create order (Idempotency-Key header, rate limited)"],
+  ["GET", "/v1/public/orders/{token}", "Order status and payment instructions"],
+  ["POST", "/v1/public/orders/{token}/proof-url | /proof", "Presigned upload, then confirm"],
+  ["GET", "/v1/admin/topups?status=awaiting_verification", "Verification queue"],
+  ["POST", "/v1/admin/topups/{id}/approve | /reject", "Approve (optional received_amount_rp) credits koin; reject needs a reason"],
+  ["GET POST", "/v1/admin/fee-configs", "List versions; create a new version with effective_from"],
+  ["GET PUT", "/v1/admin/settings", "Presets, limits, order fee, free koin, floor, thresholds"],
+  ["POST", "/v1/admin/wallets/{accountId}/adjust", "Manual koin adjustment with reason (audited)"],
+  ["GET", "/v1/admin/reports/koin?from=&to=&group=day", "Top-ups, fees, koin issued and used, liability, revenue; CSV"],
+];
+
+const stackRows: string[][] = [
+  ["Frontend framework", "SvelteKit 2 with Svelte 5 and TypeScript", "Server-renders public order pages for SEO and WhatsApp link previews; ships much less JavaScript than React frameworks, which matters on low-end Android over 3G"],
+  ["Styling", "Tailwind CSS v4", "Fast mobile-first UI, no design system to maintain"],
+  ["PWA", "@vite-pwa/sveltekit (Workbox)", "Manifest, install prompt, offline app shell, cached assets, service worker push handler"],
+  ["Web Push", "SherClockHolmes/webpush-go with VAPID keys; outbox worker in the Go binary", "Free, standard Web Push; no Firebase dependency"],
+  ["i18n", "Paraglide JS (inlang)", "Type-safe messages, Bahasa Indonesia default, tiny runtime"],
+  ["Validation", "Zod on the client; Go validator on the server", "Server is the source of truth"],
+  ["Backend language", "Go 1.23+", "Your friend's pick; one static binary, low memory, cheap to host"],
+  ["HTTP router", "chi v5", "Uses plain net/http handlers and middleware, so nothing to unlearn and no lock-in; Fiber is not net/http compatible and Echo adds little at this size"],
+  ["Database", "PostgreSQL 16", "Transactions for money, partial unique indexes for unique amounts"],
+  ["DB access", "sqlc + pgx v5", "Write SQL, get typed Go code; no ORM magic"],
+  ["Migrations", "golang-migrate", "Plain up and down SQL files, run on deploy"],
+  ["Auth", "golang.org/x/oauth2 + coreos/go-oidc v3; server-side sessions in Postgres, HttpOnly cookie", "Simpler and revocable compared with JWTs; no refresh-token logic"],
+  ["Background jobs", "One ticker goroutine in the same binary (every 60 s)", "Opens and closes batches, expires orders and top-ups; move to River (Postgres queue) only when needed"],
+  ["File storage", "Cloudflare R2 via aws-sdk-go-v2 presigned PUT", "S3-compatible, no egress fees; the browser uploads directly"],
+  ["Email (notifications, magic link later)", "Resend or Postmark, sender `noreply@pesenin.product.biz.id`", "Free tier covers MVP; needs SPF, DKIM and DMARC records on the subdomain"],
+  ["Observability", "slog JSON logs, Sentry (Go and SvelteKit), uptime check", "Free tiers"],
+  ["Rate limiting", "go-chi/httprate", "Protect public order and upload endpoints"],
+  ["Share cards and OG images", "satori + @resvg/resvg-js in a SvelteKit server endpoint, cached on R2 or the CDN", "Renders branded PNG cards from markup; no headless browser"],
+  ["QR codes", "qrcode (browser) for PNG and SVG; skip2/go-qrcode in Go for server PNG", "Free, offline-capable, no server load"],
+  ["Maps and live location (phase 2)", "Leaflet + OpenStreetMap tiles via MapTiler or Stadia free tier; Server-Sent Events from Go", "No per-load fees; SSE is simpler than WebSocket for one-way updates"],
+];
+
+const costRows: string[][] = [
+  ["Domain pesenin.product.biz.id", "Rp 0", "Rp 20.000", "Subdomain of product.biz.id at MVP; a dedicated domain such as pesenin.id later costs about Rp 250.000 a year"],
+  ["Frontend: Cloudflare Pages or Vercel Hobby", "Rp 0", "Rp 0 to 320.000", "Vercel Pro is $20 if you need team features"],
+  ["Go API: Fly.io or a 1 vCPU VPS", "Rp 0 to 80.000", "Rp 160.000 to 400.000", "Go idles at about 20 to 40 MB of RAM"],
+  ["Postgres: Neon or Supabase", "Rp 0", "Rp 400.000 to 1.200.000", "Free tiers to start; paid plan once data grows"],
+  ["R2 storage for proofs", "Rp 0", "Rp 0 to 160.000", "10 GB free; 90-day retention keeps it small"],
+  ["Email, Sentry, uptime", "Rp 0", "Rp 160.000 to 320.000", "Free tiers at MVP"],
+  ["Total", "Rp 0 to 80.000", "Rp 0,75 to 2,4 million", "Estimate at Rp 16.000 per US$; check current prices"],
+];
+
+const scopeRows: string[][] = [
+  ["MVP (weeks 1 to 12)", "Google sign-in for sellers, guest checkout by default plus optional customer Google sign-up with order history and saved details, multi-brand and multi-store with 1 free brand and 1 free store and extra slots paid once in koin, unique brand and store URLs with slug redirects, QR PNG download with copy and WhatsApp share, store hours with live open or closed status and one-tap override, seller campaigns (period, minimum order, percent or fixed discount), web push for seller core events with an in-app notification center, bank accounts, menu and variants, PO batches with cutoff and quota, public order pages, fixed per-order extra charges (ongkir, packing) with delivery-only option, unique amount, proof upload, mark paid, recap, pickup checklist, wa.me templates, customer history, Koin wallet with manual top-up and configurable admin fee, super admin panel, PWA, Bahasa Indonesia"],
+  ["Phase 2 (months 3 to 6)", "Jastip mode (free-text items, per-item runner fee, shared run list), staff roles per brand and Store, bank mutation auto-check (Moota-style integration) as a paid add-on, QRIS static display, payment gateway or dynamic QRIS for koin top-up (gateway fee mapped into the admin fee config), magic link and Apple sign-in, opt-in marketing push (PO opening, store opened, campaign start, pickup reminders), waitlist, add-ons, broadcast helper, percentage, conditional and optional extra charges, Discover (stores near me, open now, categories, favorites), mobile stores (live location, route spots, stop requests, meeting-point delivery waiver), QR templates, SVG, channel tracking and stable QR links, campaign free item, limits and codes, monthly slot billing option"],
+  ["Phase 3 (month 6 and later)", "Small-cafe mode: stock, walk-in POS, simple table or counter orders, catering quotes, multi-staff shifts, optional payment gateway"],
+];
+
+const releaseRows: string[][] = [
+  ["1", "Foundation", "Repo, chi skeleton, Postgres, migrations, sqlc, SvelteKit PWA shell, CI, staging deploy", "Both"],
+  ["2", "Sign-in and tenancy", "Google OAuth, sessions, account, brand, default Store, slug rules and availability check, onboarding UI", "Both"],
+  ["3", "Catalog and stores", "Bank accounts, products, variants, photo upload, store hours, override and live status", "Both"],
+  ["4", "PO batches and public pages", "Batch editor, auto open and close, SSR brand, store and order pages with status and link preview, create order", "Both"],
+  ["5", "Payment", "Unique amount, fixed extra charges with snapshot, order status page, proof upload with compression, expiry worker", "Backend lead"],
+  ["6", "Seller inbox", "Order list, search by amount, mark paid, reject, cancel, wa.me templates, web push for seller core events and in-app notification center", "Frontend lead"],
+  ["7", "Operations", "Recap, shopping list, pickup checklist, customer history, CSV export", "Both"],
+  ["8", "Campaigns and links", "Campaigns (period, minimum, discount), QR PNG download, copy and WhatsApp share, slug rename with redirects", "Both"],
+  ["9", "Koin", "Koin ledger, order debit on paid, grace floor and soft lock, top-up with admin fee config, super admin queue, settings and reports, extra slot purchase", "Backend lead"],
+  ["10", "Customer accounts", "Optional customer Google sign-up, saved details and addresses, order history, linking guest orders from the device, customer order-status push", "Both"],
+  ["11", "Private beta", "10 home sellers run real POs; measure admin time before and after; fix top issues", "Iping (QA)"],
+  ["12", "Launch", "Privacy policy and terms, PSE registration started, landing page, onboarding video, public launch", "Both"],
+];
+
+const phaseScopeRows: string[][] = [
+  ["P1 MVP v1 (weeks 1 to 10, beta to week 14)", "Google sign-in for sellers, 1 free brand and 1 free store (no paid slots), unique brand slug, bank accounts, products and variants, PO batches with cutoff and quota, SSR public pages with link previews, guest checkout, PNG QR with copy and WhatsApp share, fixed per-order extra charges (ongkir, packing) with delivery-only option, unique amount, proof upload, mark paid, recap, pickup checklist, customer list, wa.me templates, simple Buka or Tutup toggle, web push for new order and proof uploaded with in-app notification center, Koin wallet with manual top-up and one fixed admin fee, super admin queue, PWA, Bahasa Indonesia"],
+  ["P2 Growth (about March to May 2027)", "Campaigns, verified reviews with the 1 to 3 Mangkok grade and seller reply, share cards, customer ref links, seller referral and Made with Pesenin footer, customer Google accounts with history and saved details, full store hours and special dates, multiple brands and paid extra slots, slug rename redirects, customer order-status push, remaining seller push events, preferences and quiet hours, light gamification (PO progress, sold-out, six badges, streak), basic Customer Trust Grade (completed orders, no-show count, level shown to sellers), QR templates and channel tracking, full admin fee config, email magic link"],
+  ["P3 Community and offline (about June to November 2027)", "Patungan group orders, Kumpul pickup spots and events (bazaars, CFD, campus, office), community pages, jastip mode, Discover nearby and open now, full gamification (shop map, levels, customer stamps and badges), mobile stores with live location and stop requests, opt-in marketing push, review photos, tags, recency weighting and Pesenin Pick, advanced trust scoring with DP rules, auto-decline and appeals, campaign limits and promo codes"],
+  ["P4 Scale (from about December 2027)", "Payment gateway or dynamic QRIS top-up, bank mutation auto-check, staff roles per brand and store, small-cafe POS and stock, collabs between brands, move to pesenin.id, seller analytics, Apple sign-in"],
+];
+
+const p1ReleaseRows: string[][] = [
+  ["1", "Foundation", "Repo, chi skeleton, Postgres, migrations, sqlc, SvelteKit PWA shell, CI, staging deploy", "Both"],
+  ["2", "Sign-in and onboarding", "Google OAuth, sessions, account, brand with default store, slug check, in-app browser prompt, onboarding UI", "Both"],
+  ["3", "Catalog", "Bank accounts, products, variants, photo upload, Buka or Tutup toggle", "Both"],
+  ["4", "PO batches and public pages", "Batch editor, auto open and close, SSR brand, store and order pages with link preview, create order, PNG QR", "Both"],
+  ["5", "Payment", "Unique amount, fixed extra charges with snapshot, order status page, proof upload with compression, expiry worker", "Backend lead"],
+  ["6", "Seller inbox and push", "Order list, search by amount, mark paid, reject, cancel, wa.me templates, web push for new order and proof, in-app notification center", "Frontend lead"],
+  ["7", "Operations", "Recap, pickup checklist (with a no-show mark ready for the P2 trust grade), customer list, CSV export", "Both"],
+  ["8", "Koin", "Koin ledger, order debit on paid, grace floor and soft lock, top-up with one fixed admin fee, super admin queue and basic reports", "Backend lead"],
+  ["9", "Hardening and beta start", "QA pass on money flows, privacy policy and terms, onboard first 10 sellers by concierge, seller WhatsApp community", "Iping (QA)"],
+  ["10", "Beta to 20 sellers", "Fix top issues, onboard 10 more sellers, weekly check-ins, start measuring exit criteria; beta continues to week 14 and the exit review sets Phase 2 priorities", "Both"],
+];
+
+const giveCode = `Feature: Sign up with Google
+  Scenario: New seller reaches a shareable PO link in under 2 minutes
+    Given I open pesenin.product.biz.id in Chrome on Android and I have no account
+    When I tap "Masuk dengan Google" and approve the consent screen
+    Then an account, a Koin wallet with 5.000 free koin (promo_free_credit) and an empty brand draft are created
+    And I see step 1 of 3: brand name with an auto-suggested slug
+    When I finish brand, bank account and first product
+    Then a default Store "Utama" exists and a PO batch is pre-filled with today + 2 days as ready date
+    And I can copy or share the link pesenin.product.biz.id/{brand}/po/{code}
+
+  Scenario: Seller opens the app inside Instagram's in-app browser
+    Given my user agent is a known in-app browser
+    When I land on the sign-in screen
+    Then I see "Buka di Chrome" instructions instead of the Google button
+
+Feature: Customer places an order
+  Scenario: Order gets a unique amount
+    Given batch "SB-0412" is open and "Salt Bread Original" has 5 left at Rp 15.000
+    When a customer orders 3 with name "Dimas" and WhatsApp "0812 3456 7890"
+    Then the number is stored as +6281234567890 and a brand customer is created or updated
+    And the order total_due is 45.000 plus a suffix between 1 and 999, for example Rp 45.023
+    And no other pending order on the same bank account has the same total_due
+    And remaining quota for the item becomes 2
+
+  Scenario: Quota race
+    Given an item has 1 left
+    When two customers submit at the same time
+    Then exactly one order succeeds and the other sees "Habis" without losing the rest of the cart
+
+Feature: Seller confirms payment
+  Scenario: Mark paid charges credit exactly once
+    Given an order is proof_submitted and the wallet balance is 3.200 koin
+    When I tap "Tandai Lunas"
+    Then payment_status becomes paid and paid_at is set
+    And one wallet_transaction of type order_debit for -100 koin is written and balance is 3.100 koin
+    When the same request is retried or I undo and re-mark paid
+    Then no second charge is written
+
+  Scenario: Balance below zero never blocks orders
+    Given the wallet balance is -5.000 koin (the grace floor)
+    When customers place new orders in my open batch
+    Then the orders are accepted and customers see payment instructions as usual
+    And I can still mark orders paid, and charges keep accruing
+    But recap, shopping list, CSV export and creating a new batch show "Isi saldo untuk membuka"
+    And everything unlocks immediately after an approved top-up brings the balance above the floor
+
+Feature: Batch cutoff
+  Scenario: Auto close
+    Given a batch closes at 20:00 WIB
+    When the worker runs at 20:00:30 WIB
+    Then the batch status is closed and the public page shows "PO ditutup" with the next open batch if any`;
+
+const algoCode = `// Called inside the CREATE ORDER transaction (SERIALIZABLE or with an advisory lock per bank account)
+func assignUniqueAmount(ctx, tx, bankAccountID, base int64) (suffix, total int64, err error) {
+    // 1. Load taken totals for this bank account among active orders
+    taken := tx.TakenTotals(ctx, bankAccountID) // payment_status IN ('pending','proof_submitted')
+                                                // OR (expired AND expired_at > now() - 48h)
+    // 2. Try random suffixes from 1..999, skipping ones that make "round-looking" numbers
+    for _, s := range shuffled(1..999) {
+        if s%100 == 0 { continue }            // avoid 45.100, 45.200
+        if taken.Has(base + s) { continue }
+        return s, base + s, nil
+    }
+    // 3. Extremely rare: widen to 1.001..1.999, then return ErrNoSuffix and ask seller to add a bank account
+}
+// Backed by: CREATE UNIQUE INDEX ux_orders_active_amount ON orders(bank_account_id, total_due)
+//            WHERE payment_status IN ('pending','proof_submitted');`;
+
+const waCode = `Konfirmasi:
+Halo {nama}, pesanan {kode} di {brand} sudah kami terima 🙏
+Rincian:
+{rincian}
+Total transfer: Rp {total} (mohon transfer PERSIS sampai 3 digit terakhir)
+{bank} {norek} a.n. {pemilik}
+Upload bukti di: {link_status}
+Batas bayar: {batas_bayar}
+
+Pengingat:
+Halo {nama}, pesanan {kode} belum kami terima pembayarannya. Total Rp {total}. Bayar sebelum {batas_bayar} ya: {link_status}
+
+Siap diambil:
+Halo {nama}, pesanan {kode} sudah siap! Ambil di {store}, {alamat} ({jam_ambil}). Terima kasih 🙌
+
+{rincian} expands to one line per item, discount, extra charge and the unique code, for example:
+3x Salt Bread Original  Rp 45.000
+Diskon Promo Gajian  -Rp 8.500
+Ongkir  Rp 10.000
+Packing  Rp 2.000
+Kode unik  Rp 23
+
+URL: https://wa.me/{wa_number_without_plus}?text={urlencoded_body}`;
+
+const mermaidCode = `flowchart LR
+  C[Customer browser] -->|SSR order page| FE[SvelteKit PWA\\npesenin.product.biz.id]
+  S[Seller PWA] --> FE
+  FE -->|/api reverse proxy, session cookie| API[Go API chi\\nFly.io or VPS]
+  API --> DB[(PostgreSQL\\nNeon or Supabase)]
+  API -->|presign| R2[(Cloudflare R2\\ntransfer proofs)]
+  C -->|PUT compressed image| R2
+  API <-->|OAuth 2.0 + OIDC| G[Google]
+  W[Worker goroutine\\nopen, close, expire] --> DB
+  S -->|wa.me link| WA[WhatsApp app]
+  A[Platform admin] --> FE`;
+
+export default function App() {
+  return (
+    <Page
+      title="Pesenin PRD: PO-first Order Tool (Phased roadmap, MVP v1)"
+      summary="A build-ready spec for one builder and a friend: what to build, for whom, how the Account, Brand and Store model works, the Go and SvelteKit stack, a four-phase roadmap with go-to-market per phase, and a 10-week Phase 1 plan to the first paying sellers."
+      width="column"
+    >
+      <Properties
+        items={[
+          { label: "Product", value: "Pesenin (name decided)" },
+          { label: "Domain", value: "pesenin.product.biz.id (one origin: public pages, seller app at /app, Go API at /api)" },
+          { label: "Owner", value: "Iping, Lead Product, Design and QA" },
+          { label: "Version and date", value: "v1.0 draft, 13 Nov 2026" },
+          { label: "Positioning", value: "The simple PO tool for home food sellers who sell by order, not by shop." },
+          { label: "Pricing", value: "100 koin (Rp 100) per paid order from a prepaid Koin wallet; 1 koin = Rp 1; 5.000 free koin (50 orders) at sign-up; top-ups from Rp 25.000 plus a configurable admin fee; orders are never blocked" },
+          { label: "Stack", value: "Go (chi, sqlc, pgx, PostgreSQL) + SvelteKit PWA (Tailwind)" },
+          { label: "Roadmap", value: "P1 MVP v1 (10 weeks, prove sellers pay) → P2 Growth → P3 Community and offline → P4 Scale; approved by Iping 13 Nov 2026" },
+        ]}
+      />
+
+      <TableOfContents items={toc} />
+
+      <Section heading="Phased roadmap and GTM (start here)" id="roadmap">
+        <Callout tone="info" lead="How to read this PRD">This roadmap is the source of truth for what ships when. Sections 1 to 25 describe the full product; the MoSCoW column in section 7 carries the phase (Must = Phase 1 unless tagged, P2, P3, P4 tags otherwise). Where an older section says MVP or phase 2, the phase table here wins.</Callout>
+        <Section heading="Phases at a glance">
+          <Table
+            columns={["Phase", "Goal", "Features", "Target users", "Timeline (estimate)", "Effort (estimate)"]}
+            rows={[
+              ["P1 MVP v1", "Prove home sellers run real POs on Pesenin and pay for koin", "Google sign-in; 1 free brand and 1 store (no paid slots); PO batch, order link and PNG QR; guest checkout; manual transfer with unique amount, proof upload and mark paid; production recap and pickup checklist; Koin wallet with manual top-up and one fixed admin fee; fixed extra charges; simple Buka or Tutup toggle; push for new order and proof uploaded; wa.me templates; super admin top-up queue", "10 to 20 hand-picked home food PO sellers in Jabodetabek", "Build weeks 1 to 8 (16 Nov 2026 to 10 Jan 2027), beta weeks 9 to 14 (to about 21 Feb 2027)", "2 people × 15 to 20 h a week ≈ 300 to 400 hours"],
+              ["P2 Growth", "Make sellers bring sellers and customers come back", "Campaigns; verified reviews with Mangkok grade; share cards, customer ref links, seller referral and Made with Pesenin footer; customer Google accounts and order history; full store hours and special dates; paid extra brand and store slots; customer order-status push and the rest of the seller push events; light gamification (PO progress, sold-out, badges, streak); basic Customer Trust Grade (completed orders, no-show count, level shown to sellers)", "Home food and home coffee sellers across Jabodetabek and Bandung; sellers with a second brand; their repeat customers", "About March to May 2027 (13 weeks)", "≈ 400 to 500 hours; still 2 people"],
+              ["P3 Community and offline", "Make Pesenin the place where local food communities meet offline", "Patungan group orders; Kumpul pickup spots and events (bazaars, CFD, campus, office); community pages; jastip mode; Discover nearby and open now; full gamification (shop map, levels, customer stamps); mobile stores with live location and stop requests; review photos, tags and Pesenin Pick; advanced trust scoring with DP rules, auto-decline and appeals", "Komplek, campus and office communities, bazaar organisers, jastip runners, gerobak sellers", "About June to November 2027", "≈ 700 to 900 hours; add a part-time community lead"],
+              ["P4 Scale", "Remove manual work and open bigger sellers", "Payment gateway or dynamic QRIS top-up; bank mutation auto-check; staff roles; small-cafe POS and stock; collabs between brands; move to pesenin.id; seller analytics", "Growing sellers, multi-outlet brands, small cafés", "From about December 2027", "Needs revenue or funding; first hire (backend or growth)"],
+            ]}
+          />
+        </Section>
+        <Section heading="Exit criteria per phase">
+          <Table
+            columns={["Phase", "Move on when"]}
+            rows={[
+              ["P1", "20 active sellers (1 or more paid orders in the last 14 days); 60% of them ran 2 or more POs; 50% topped up at least once; paid-match rate 80% or more; sellers report at least 1 hour saved per PO; no open critical bugs on money or orders"],
+              ["P2", "150 active sellers; 30% of new sellers come from referral or the Made with Pesenin footer; 2-month seller retention 50% or more; review rate 15% or more; no-show rate measured and falling; about 30.000 paid orders a month (Rp 3 million koin used)"],
+              ["P3", "600 active sellers; 3 communities running a monthly Kumpul; 20% of paid orders through group orders or pickup spots; about 90.000 paid orders a month"],
+              ["P4", "1.600 weekly active sellers and 200.000 paid orders a month (Rp 20 million); CAC payback under 6 months on every paid channel"],
+            ]}
+          />
+        </Section>
+        <Section heading="Positioning and ICP">
+          <Callout lead="Positioning">For Indonesian home food sellers who run pre-orders over WhatsApp and Instagram, Pesenin is the one PO link that matches bank transfers automatically and writes the production recap for you. Unlike Google Forms or quota-capped order tools, there is no monthly fee and orders are never blocked: Rp 100 per paid order, and the money goes straight to the seller's own account.</Callout>
+          <BulletList
+            items={[
+              "ICP: home food seller (bakery, kue, frozen food, catering kecil, home coffee), often a woman aged 25 to 40, selling through IG, TikTok and WhatsApp groups.",
+              "Runs 2 to 8 PO batches a month with 30 to 300 orders a month, paid by manual bank transfer or e-wallet.",
+              "Pain today: matching transfers to names, retyping recaps, chasing unpaid orders, Google Form chaos, customers who never pick up.",
+              "Not ICP for P1: restaurants with walk-in POS, sellers who only sell on GoFood or ShopeeFood, marketplace-only sellers.",
+            ]}
+          />
+        </Section>
+        <Section heading="Messaging (Bahasa Indonesia)">
+          <Table
+            columns={["Use", "Message"]}
+            rows={[
+              ["Tagline", "Hungry? Ping me · Laper? Ping aja!"],
+              ["Headline", "Satu link buat PO. Transfer langsung cocok, rekap jadi sendiri."],
+              ["Pain", "Capek nyocokin transfer satu-satu? Rp 45.023 langsung ketahuan punya siapa."],
+              ["Price", "Rp 100 per pesanan lunas. Tanpa biaya bulanan. 50 pesanan pertama gratis."],
+              ["Trust", "Uang pembeli langsung masuk ke rekening kamu, bukan ke kami."],
+              ["Customer", "Pesan tanpa daftar, cukup nama dan nomor WhatsApp."],
+              ["P2 referral", "Ajak teman seller, kalian berdua dapat 5.000 koin."],
+              ["P2 trust", "Tahu mana pembeli Terpercaya sebelum kamu masak."],
+              ["P3 community", "Ketemu di Kumpul Pesenin hari Minggu, ambil pesananmu sekalian jajan."],
+            ]}
+          />
+        </Section>
+        <Section heading="GTM per phase">
+          <Table
+            columns={["Phase", "Channels and tactics", "Budget (estimate, low)"]}
+            rows={[
+              ["P1", "Hand-picked beta from personal network, Hacktiv8 students and alumni who sell food, and IG or TikTok PO sellers in Jakarta found by hashtag (#poJakarta, #kuerumahan, #frozenfoodjakarta); concierge onboarding by video call or in person (we set up the first PO with them); 5.000 free koin at sign-up plus a proposed 10.000 founding-seller bonus; private seller WhatsApp community for support and feedback; weekly check-in calls", "Rp 1,5 to 3 million total: printed QR stands and stickers, 1 or 2 seller kopdar with snacks, small thank-you hampers; hosting Rp 0 to 250.000; free koin is revenue forgone, not cash"],
+              ["P2", "Open sign-up; seller referral and Made with Pesenin footer; TikTok and IG content (before and after rekap, sold-out moments, seller stories) 3 times a week; 3 to 5 case studies from beta sellers; partnerships with baking and home-coffee communities and classes", "Rp 2 to 5 million a month: 2 to 4 micro-creator collabs, co-hosted community sessions; referral koin is non-cash"],
+              ["P3", "Kumpul presence at bazaars and Car Free Day; campus and office pickup points; seller and campus ambassadors paid in koin and merch; recruit jastip runners", "Rp 5 to 10 million a month: booth fees, printed material, ambassador incentives"],
+              ["P4", "Partnerships with banks, e-wallets, ingredient suppliers and packaging vendors; paid ads only when CAC payback is under 6 months", "Set from revenue; at about Rp 15.000 a month revenue per active seller (150 paid orders), CAC must stay under about Rp 90.000"],
+            ]}
+          />
+          <Callout tone="warning" lead="Season timing">Ramadan 2027 is expected to start around 8 February and Lebaran around 10 March (check the official dates). The P1 beta runs straight into kue kering and hampers PO season, which is the best stress test and the best story for P2 case studies, but sellers will be busy: onboard beta sellers by mid-January.</Callout>
+        </Section>
+        <Section heading="Launch pricing">
+          <BulletList
+            items={[
+              "100 koin (Rp 100) per paid order; 1 koin = Rp 1.",
+              "5.000 free koin (50 paid orders) at sign-up; founding-seller bonus is an open question.",
+              "Top-ups Rp 25.000, Rp 50.000, Rp 100.000 or custom (Rp 25.000 to Rp 1.000.000), with one fixed admin fee in P1 (value to decide, Rp 0 to Rp 2.500).",
+              "1 brand and 1 store free; paid extra slots start in P2.",
+            ]}
+          />
+        </Section>
+        <Section heading="Funnel KPIs">
+          <Table
+            columns={["Step", "Definition", "P1 target", "P2 target"]}
+            rows={[
+              ["Reach", "Sellers contacted or landing page visits", "60 contacted", "5.000 visits a month"],
+              ["Sign-up", "Google sign-in completed", "30 (50% of contacted)", "20% of visits"],
+              ["Activation", "First PO link published within 24 hours", "80% (concierge)", "60%"],
+              ["First value", "First paid order within 7 days", "70%", "50%"],
+              ["Habit", "2 or more POs in 30 days", "60%", "50%"],
+              ["Revenue", "Top-up after free koin", "50%", "30 to 40%"],
+              ["Referral", "Sellers who invite a qualified seller", "Not measured", "20%"],
+              ["Customer conversion", "Order page views to paid orders", "20% or more", "25% or more"],
+            ]}
+          />
+        </Section>
+        <Section heading="Timeline (Mermaid Gantt)">
+          <CodeBlock maxHeight={360}>{`gantt
+  title Pesenin roadmap (estimate)
+  dateFormat YYYY-MM-DD
+  axisFormat %b %y
+  section Phase 1 MVP v1
+  Build core loop (weeks 1 to 8)       :p1a, 2026-11-16, 8w
+  Private beta 10 to 20 sellers         :p1b, after p1a, 6w
+  Exit review                           :milestone, m1, after p1b, 0d
+  section Phase 2 Growth
+  Build growth features                 :p2a, 2027-03-01, 13w
+  Open sign-up, referral, content GTM   :p2b, 2027-03-01, 13w
+  section Phase 3 Community and offline
+  Group orders, Kumpul, jastip, discover :p3a, 2027-06-01, 26w
+  Bazaars, CFD, campus and office spots :p3b, 2027-06-01, 26w
+  section Phase 4 Scale
+  Payments, auto-check, staff, cafe POS :p4a, 2027-12-01, 26w`}</CodeBlock>
+        </Section>
+      </Section>
+
+      <Section heading="Brand: logo and Pingping" id="brand">
+        <Text>Pesenin should feel like a cheerful little shop game for both sellers and customers. The brand has two parts: a clean app icon and a mascot with personality.</Text>
+        <Properties
+          items={[
+            { label: "Logo (chosen)", value: "Shop-shaped P app icon: orange rounded square, the letter P drawn as a little shop with a striped awning, a map pin and a star koin" },
+            { label: "Mascot", value: "Pingping, the smiling shop character" },
+            { label: "Tagline", value: "Hungry? Ping me (Indonesian variant: Laper? Ping aja!); seller variant Jualan? Pingping bantu.; mobile cart variant Lewat sini? Ping me!" },
+            { label: "Placeholder images", value: "Grey Pingping on #EEEEEE when a seller has not uploaded a photo: 1:1 (800×800) for products, 16:9 (1200×675) for store and brand banners, circle for avatars" },
+            { label: "Colours (proposal)", value: "Pesenin orange as primary, cream background, dark brown text, koin gold accent; final hex values set in the design file" },
+            { label: "Assets to produce", value: "SVG master, PWA icons (192, 512, maskable), favicon, OG default image, animated logo (Lottie or SVG + CSS, plus GIF and MP4 for social)" },
+          ]}
+        />
+        <Section heading="Where Pingping appears">
+          <Table
+            columns={["Place", "Use", "Phase"]}
+            rows={[
+              ["Idle loop", "Animated logo: Pingping bounce and blink, pin bob, koin spin (about 2,4 s loop) for loading states", "P1"],
+              ["Intro pop-in", "Pingping pops in, the pin drops, the koin pops with sparkles, then the pesenin wordmark slides in; used on the splash screen and first open, never longer than 1,5 seconds on splash", "P1"],
+              ["Celebration koin rain", "Pingping wiggles and hops while koins rain down; used on top-up approved, new order and achievements", "P1 (top-up, new order), P2 (achievements)"],
+              ["Placeholder images", "Grey Pingping for products, banners and avatars without an uploaded photo", "P1"],
+              ["Ping me follow button", "Button on store pages: customers follow a store and get a ping when it opens or starts a new PO (uses the opt-in push events)", "P3"],
+              ["QR stickers and posters", "Hungry? Ping me → scan buat pesan on the QR download templates", "P2"],
+              ["Onboarding", "Pingping guides the 3 setup steps: Halo, aku Pingping! Yuk buka PO pertamamu.", "P1"],
+              ["Empty states", "Belum ada pesanan. Bagikan link PO-mu, Pingping tunggu ya!", "P1"],
+              ["Push notification copy", "Pingping's voice, starting with Ping!: Ping! Ada pesanan baru dari Rina 🎉, Ping! Bukti transfer masuk, cek yuk, Ping! Roti kamu siap diambil (title stays factual; Pingping voice in the body)", "P1"],
+              ["Achievements and celebrations", "Pingping cheers on sold-out batches, badges and streaks", "P2"],
+              ["Shop map and levels", "Pingping lives in the seller's town and grows with it", "P3"],
+            ]}
+          />
+          <BulletList
+            items={[
+              "Pingping never appears on payment errors, rejected proofs or trust warnings; those stay plain and serious. On happy money moments (top-up approved) Pingping can celebrate, but amounts and koin balances are always shown in plain text.",
+              "Animations respect prefers-reduced-motion (static icon instead) and stay under 100 KB on the splash screen.",
+              "Voice: friendly, short, Bahasa Indonesia sehari-hari, never childish to sellers.",
+              "Animated assets ship as GIF and MP4 for social; in-app versions are rebuilt as Lottie or SVG with CSS to stay small and sharp.",
+              "Placeholders are served from the CDN as static WebP and PNG; the seller is nudged to upload a real photo, which converts better.",
+            ]}
+          />
+        </Section>
+      </Section>
+
+      <Section heading="1. Overview and problem" id="overview">
+        <Text>Indonesian home food sellers run pre-order (PO) batches: open orders, close at a cutoff, produce, then hand over on a ready date. Today they do it with WhatsApp chats, Google Forms and a notebook. Customers pay by bank transfer, so the seller scrolls through the bank app matching amounts to names, retypes production totals, and chases unpaid orders one by one.</Text>
+        <Text>Pesenin turns each PO into one shareable link. Customers order with name and WhatsApp number, get a unique transfer amount such as Rp 45.023, and upload proof. The seller ticks paid in seconds, gets an automatic production recap and pickup checklist, and sends WhatsApp messages with one tap. We never hold money: customers transfer straight to the seller.</Text>
+        <Callout lead="Why sellers switch">It saves at least an hour of admin per PO batch, costs Rp 100 per paid order, and never stops taking orders, unlike quota-capped tools such as OrderOnline.</Callout>
+      </Section>
+
+      <Section heading="2. Goals and non-goals" id="goals">
+        <Grid columns={2}>
+          <Section heading="Goals">
+            <BulletList
+              items={[
+                "First PO link in under 2 minutes from Google sign-in",
+                "Payment matching in seconds through unique amounts",
+                "Recap and checklist replace the notebook",
+                "One account runs many brands and pickup points",
+                "Feels like an app on a cheap Android phone, inside the browser",
+                "Reach 200.000 paid orders a month (Rp 20 million) by month 12",
+              ]}
+            />
+          </Section>
+          <Section heading="Non-goals for MVP">
+            <BulletList
+              items={[
+                "Payment gateway or holding customer money",
+                "WhatsApp Business API messaging",
+                "Discover and browse stores (near me, open now, categories, favorites): Phase 3",
+                "Campaigns, reviews, referral, customer accounts, paid slots, trust grade and gamification: Phase 2",
+                "Native iOS or Android apps",
+                "Stock management or walk-in POS",
+                "Courier integrations",
+              ]}
+            />
+          </Section>
+        </Grid>
+      </Section>
+
+      <Section heading="3. Personas" id="personas">
+        <Table columns={["Persona", "Context", "Main pain"]} rows={personas} />
+      </Section>
+
+      <Section heading="4. Success metrics" id="metrics">
+        <Table columns={["Metric", "Definition", "Target"]} rows={metricRows} />
+        <Equation>
+          {"Revenue = paid orders × Rp 100; Rp 20.000.000 = "}
+          <Frac num="Rp 20.000.000" den="Rp 100" />
+          {" = 200.000 paid orders a month"}
+        </Equation>
+        <Text>Targets follow the earlier model: about 1.600 paying sellers averaging 125 paid orders a month by month 12.</Text>
+      </Section>
+
+      <Section heading="5. Account, Brand and Store model" id="tenancy">
+        <Diagram
+          direction="vertical"
+          nodes={[
+            { id: "u", label: "User", detail: "Google identity", kind: "person" },
+            { id: "a", label: "Account", detail: "Owner, wallet, top-ups" },
+            { id: "b1", label: "Brand: Roti Rina", detail: "Slug, bank, menu, customers" },
+            { id: "b2", label: "Brand: Jus Segar", detail: "Slug, bank, menu, customers" },
+            { id: "s1", label: "Store: Utama", detail: "Home pickup" },
+            { id: "s2", label: "Store: Kantor", detail: "Office lobby" },
+            { id: "s3", label: "Store: Utama", detail: "Default" },
+            { id: "p", label: "PO batches", detail: "Orders, recap, checklist", kind: "terminal" },
+          ]}
+          edges={[
+            { from: "u", to: "a", label: "owns" },
+            { from: "a", to: "b1" },
+            { from: "a", to: "b2" },
+            { from: "b1", to: "s1" },
+            { from: "b1", to: "s2" },
+            { from: "b2", to: "s3" },
+            { from: "s1", to: "p" },
+            { from: "s2", to: "p" },
+            { from: "s3", to: "p" },
+          ]}
+        />
+        <Section heading="What lives at which level">
+          <Table columns={["Level", "Holds", "Why"]} rows={levelRows} />
+          <Callout tone="info" lead="Decision: one wallet per account">Koin sit at Account level and are shared by all brands. The ledger records brand_id on each order debit, so per-brand usage is still visible.</Callout>
+        </Section>
+        <Section heading="Free and paid slots">
+          <Properties
+            items={[
+              { label: "Free", value: "1 brand with 1 store (the default Utama) per account" },
+              { label: "Extra brand", value: "extra_brand_fee_koin, price to decide (starting proposal 25.000 koin); includes the new brand's first store" },
+              { label: "Extra store", value: "extra_store_fee_koin, price to decide (starting proposal 10.000 koin) for any brand" },
+              { label: "Billing mode", value: "slot_billing_mode = one_time in MVP; monthly can be switched on later" },
+            ]}
+          />
+          <Text>Recommendation: charge a one-time koin fee per extra slot for MVP. It needs no renewal job or lapsed states, it fits the build a new shop feeling, and most revenue still comes from the per-order fee. A monthly mode stays available as a setting for heavy multi-store sellers later.</Text>
+          <BulletList
+            items={[
+              "Buying a slot needs a balance at least equal to the fee; the grace floor never applies to purchases.",
+              "The fee is shown before confirming; the slot_purchase ledger debit and the new brand or store are created in one transaction.",
+              "A slot belongs to the account: archiving a brand or store frees its slot for reuse; no koin refund.",
+              "Every brand keeps at least 1 store; the last store cannot be archived.",
+              "Slots never affect order taking: links, orders and payments keep working at any balance.",
+              "Prices and mode are platform settings the super admin edits; every change is audited.",
+            ]}
+          />
+          <CodeBlock maxHeight={320}>{`Feature: Free and paid slots
+  Scenario: First brand and store are free
+    Given a new account
+    When I finish onboarding
+    Then 1 brand and its default store Utama exist and no koin are deducted
+
+  Scenario: Adding a second store costs koin
+    Given extra_store_fee_koin is 10.000 and my balance is 12.300 koin
+    When I add store "Kantor" to brand Roti Rina
+    Then I see "Buka toko baru: 10.000 koin" before confirming
+    And confirming writes one slot_purchase of -10.000 koin and creates the store in the same transaction
+
+  Scenario: Not enough koin
+    Given my balance is 4.000 koin
+    When I try to add a store
+    Then I am offered Isi Koin, nothing is created, and my existing links keep working
+
+  Scenario: Archived store frees its slot
+    Given I archived store "Kantor"
+    When I create store "Pasar Minggu"
+    Then no koin are deducted because the paid slot is reused`}</CodeBlock>
+        </Section>
+        <Section heading="Public URLs">
+          <BulletList
+            items={[
+              "`pesenin.product.biz.id/{brand}`: brand page with all open batches",
+              "`pesenin.product.biz.id/{brand}/{store}`: open batches for one pickup point",
+              "`pesenin.product.biz.id/{brand}/po/{code}`: the batch order page sellers share",
+              "`pesenin.product.biz.id/o/{token}`: customer's order status page (22-character random token)",
+              "`pesenin.product.biz.id/app`: seller PWA; `pesenin.product.biz.id/api`: Go API behind a reverse proxy",
+              "Why one origin: only one DNS record is needed under product.biz.id, the session cookie stays host-only, and there is no CORS to configure",
+              "Slug rules, renames with redirects, and QR codes are in section 13",
+            ]}
+          />
+        </Section>
+        <Section heading="Roles">
+          <Table columns={["Role", "Phase", "Can do"]} rows={roleRows} />
+        </Section>
+      </Section>
+
+      <Section heading="6. User journeys" id="journeys">
+        <Section heading="Seller sign-up to first shared link">
+          <Steps
+            steps={[
+              { title: "Tap Masuk dengan Google", detail: "Account, wallet with 50 free orders and session created" },
+              { title: "Name the brand", detail: "Slug suggested and checked live; default Store Utama created" },
+              { title: "Add bank account", detail: "Bank picker, number, holder name" },
+              { title: "Add first product", detail: "Name, price, optional photo and variants" },
+              { title: "Open first PO", detail: "Pre-filled: cutoff tomorrow 20:00, ready in 2 days, pickup at Utama" },
+              { title: "Share", detail: "Copy link or share to WhatsApp status and groups through the share sheet" },
+            ]}
+          />
+        </Section>
+        <Section heading="Customer order to proof">
+          <Steps
+            steps={[
+              { title: "Open link", detail: "Server-rendered page loads fast and shows the store status; no login needed, Masuk dengan Google is optional" },
+              { title: "Pick items", detail: "Quota left shown per item; the summary lists the subtotal, any discount and each extra charge as its own line" },
+              { title: "Enter name, WhatsApp, pickup or delivery", detail: "Number remembered on the device for next time" },
+              { title: "See unique amount", detail: "Big Rp 45.023 with copy buttons for amount and account number" },
+              { title: "Transfer in bank app, then upload proof", detail: "Image compressed in the browser to under 300 KB" },
+              { title: "Optional: send confirmation to the seller on WhatsApp", detail: "Pre-filled wa.me message" },
+            ]}
+          />
+        </Section>
+        <Section heading="Customer account (optional, MVP)">
+          <Steps
+            steps={[
+              { title: "Guest by default", detail: "Ordering through a seller link never asks for an account" },
+              { title: "Offer after ordering", detail: "Status page: Simpan data dan riwayat pesanan dengan Google" },
+              { title: "One tap Google sign-in", detail: "Creates a user and customer profile only, no seller account or wallet" },
+              { title: "Autofill next time", detail: "Name, WhatsApp and saved addresses filled on any Pesenin order page" },
+              { title: "History", detail: "Pesanan saya lists orders across sellers with status and reorder links; guest orders from this device are linked" },
+            ]}
+          />
+          <Text>Discover (stores near me, open-now filter, categories, favorites) is phase 2; in MVP customers reach stores only through seller links and QR codes.</Text>
+        </Section>
+        <Section heading="Seller verify, produce, hand over">
+          <Steps
+            steps={[
+              { title: "Order inbox", detail: "Filters: Menunggu bayar, Bukti masuk, Lunas, Siap, Selesai" },
+              { title: "Match payment", detail: "Type the amount from the bank app to find the order, then Tandai Lunas" },
+              { title: "Send reminders", detail: "One tap per unpaid customer before cutoff" },
+              { title: "Batch closes", detail: "Recap: 120 salt bread, 40 kopi susu; shopping list" },
+              { title: "Ready", detail: "Mark ready and send the ready message" },
+              { title: "Pickup checklist", detail: "Tick picked up or delivered" },
+            ]}
+          />
+        </Section>
+        <Section heading="Koin top-up">
+          <Steps
+            steps={[
+              { title: "Tap Isi Koin", detail: "Pick Rp 25.000, Rp 50.000, Rp 100.000 or a custom amount" },
+              { title: "Review the breakdown", detail: "Top-up, admin fee, unique code, total to transfer, koin received" },
+              { title: "Transfer the exact total to our bank", detail: "Same unique-amount algorithm as orders; expires in 24 hours" },
+              { title: "Upload proof", detail: "Status becomes awaiting_verification; super admin notified" },
+              { title: "Super admin approves", detail: "Koin credited, soft lock lifted, seller notified, audit row written" },
+            ]}
+          />
+        </Section>
+      </Section>
+
+      <Section heading="7. Functional requirements" id="fr">
+        <Table columns={["ID", "Requirement", "MoSCoW"]} rows={frRows} />
+        <Text>Untagged Must items are Phase 1 (MVP v1). Tags in brackets (P2, P3, P4) set the phase; untagged Should and Could items follow Phase 1 and are scheduled in Phase 2 unless tagged later. See the roadmap at the top.</Text>
+      </Section>
+
+      <Section heading="8. Key user stories and acceptance criteria" id="stories">
+        <BulletList
+          items={[
+            "As a home seller, I want to sign in with Google so that I can start without remembering a password.",
+            "As a customer, I want to order with only my name and WhatsApp number so that I can finish in under a minute.",
+            "As a seller, I want each order to have a unique amount so that I can match transfers in seconds.",
+            "As a seller with two brands, I want one Koin wallet so that I top up once.",
+            "As a seller, I want to see the admin fee before I transfer so that I know exactly what I pay and how many koin I get.",
+            "As the super admin, I want to change the admin fee without a deploy so that I can adjust it when bank or gateway costs change.",
+            "As a seller, I want orders to keep coming in when my credit runs out so that I never lose a sale.",
+            "As a seller, I want to add my own extra charges such as ongkir and packing so that the transfer amount already covers them and I stop calculating by hand.",
+            "As a customer, I want to see every extra charge as its own line before I order so that there are no surprises.",
+            "As a seller, I want my first brand and store free and to pay koin only when I grow, so that starting costs nothing.",
+            "As a seller, I want a campaign with a period and a minimum order so that customers order more.",
+            "As a seller, I want a unique link and a QR for each brand and store so that I can post them on social media and print them for my stall.",
+            "As a customer, I want to see whether a store is open before I go so that I am not disappointed at a closed door.",
+            "As a customer, I want to order as a guest, or sign in with Google to keep my history and saved details.",
+            "As a cart seller (phase 2), I want to share my live location and accept stop requests so that customers find me without delivery costs.",
+            "As a seller, I want a push notification for every new order and transfer proof so that I can confirm payments quickly without watching the app.",
+            "As a customer, I want to be told when my payment is confirmed and my order is ready so that I pick it up on time.",
+            "As a seller (P2), I want a ready-made story card for my PO so that I can share it to Instagram and WhatsApp in one tap.",
+            "As a customer (P2), I want to share a PO with friends so that we can pick up together.",
+            "As a seller (P2), I want to see my PO progress, badges and streak so that running my business feels rewarding.",
+            "As a customer with a finished order (P2), I want to give 1 to 3 Mangkok and a short note so that other buyers know the store is good.",
+            "As a customer (P2), I want to see a store's Pesenin grade from verified buyers before I order.",
+            "As a seller (P2), I want to reply to reviews and report abusive ones so that my reputation is fair.",
+            "As a seller (P2), I want to see a customer's trust level and no-show history before I produce their order so that I don't waste ingredients.",
+            "As a customer (P2), I want to see my own trust level and how to improve it so that sellers accept my orders easily.",
+            "As a customer (P3), I want to appeal a no-show I think is wrong so that one mistake does not follow me.",
+            "As a seller (P3), I want to require prepayment from new customers so that big POs are safe.",
+          ]}
+        />
+        <CodeBlock maxHeight={520}>{giveCode}</CodeBlock>
+      </Section>
+
+      <Section heading="9. State machines" id="states">
+        <Section heading="Order payment status">
+          <Diagram
+            direction="horizontal"
+            nodes={[
+              { id: "pending", label: "pending", detail: "Unique amount assigned" },
+              { id: "proof", label: "proof_submitted" },
+              { id: "paid", label: "paid", detail: "Rp 100 charged once" },
+              { id: "expired", label: "expired", kind: "terminal" },
+              { id: "cancelled", label: "cancelled", kind: "terminal" },
+            ]}
+            edges={[
+              { from: "pending", to: "proof", label: "customer uploads" },
+              { from: "proof", to: "pending", label: "seller rejects", dashed: true },
+              { from: "proof", to: "paid", label: "seller marks paid" },
+              { from: "pending", to: "paid", label: "marks paid without proof" },
+              { from: "pending", to: "expired", label: "deadline passes" },
+              { from: "pending", to: "cancelled", label: "seller cancels" },
+              { from: "paid", to: "cancelled", label: "seller cancels", dashed: true },
+            ]}
+          />
+        </Section>
+        <Section heading="Order fulfilment status (only after paid)">
+          <Diagram
+            direction="horizontal"
+            nodes={[
+              { id: "np", label: "not_ready" },
+              { id: "rd", label: "ready", detail: "Ready message sent" },
+              { id: "dn", label: "completed", detail: "Picked up or delivered", kind: "terminal" },
+            ]}
+            edges={[
+              { from: "np", to: "rd", label: "mark ready" },
+              { from: "rd", to: "dn", label: "tick checklist" },
+            ]}
+          />
+        </Section>
+        <Section heading="PO batch status">
+          <Diagram
+            direction="horizontal"
+            nodes={[
+              { id: "dr", label: "draft" },
+              { id: "sc", label: "scheduled" },
+              { id: "op", label: "open" },
+              { id: "cl", label: "closed", detail: "Cutoff, quota or manual" },
+              { id: "co", label: "completed", kind: "terminal" },
+            ]}
+            edges={[
+              { from: "dr", to: "sc", label: "publish, future open time" },
+              { from: "dr", to: "op", label: "publish now" },
+              { from: "sc", to: "op", label: "opens_at" },
+              { from: "op", to: "cl", label: "closes_at or sold out" },
+              { from: "cl", to: "op", label: "reopen", dashed: true },
+              { from: "cl", to: "co", label: "all orders done or 7 days" },
+            ]}
+          />
+        </Section>
+        <Section heading="Koin top-up status">
+          <Diagram
+            direction="horizontal"
+            nodes={[
+              { id: "tp", label: "pending", detail: "Fee and unique amount frozen" },
+              { id: "ta", label: "awaiting_verification", detail: "Proof uploaded" },
+              { id: "tok", label: "approved", detail: "topup_credit written", kind: "terminal" },
+              { id: "trj", label: "rejected", detail: "Reason required", kind: "terminal" },
+              { id: "tex", label: "expired", detail: "24 h without proof", kind: "terminal" },
+            ]}
+            edges={[
+              { from: "tp", to: "ta", label: "seller uploads proof" },
+              { from: "tp", to: "tex", label: "expiry worker" },
+              { from: "ta", to: "tok", label: "super admin approves" },
+              { from: "ta", to: "trj", label: "super admin rejects" },
+              { from: "tex", to: "tok", label: "late transfer found", dashed: true },
+            ]}
+          />
+          <CodeBlock>{`stateDiagram-v2
+  [*] --> pending: seller creates top-up (fee snapshot, unique amount)
+  pending --> awaiting_verification: proof uploaded
+  pending --> expired: no proof within topup_expiry_hours (24h)
+  awaiting_verification --> approved: super admin approves / credit koin once
+  awaiting_verification --> rejected: super admin rejects with reason
+  expired --> approved: super admin finds late transfer (audited)
+  approved --> [*]
+  rejected --> [*]
+  expired --> [*]`}</CodeBlock>
+        </Section>
+        <Text>Payment and fulfilment are separate fields so a seller can mark an order ready before payment is confirmed only through an explicit override. Every transition writes an audit row.</Text>
+      </Section>
+
+      <Section heading="10. Unique-amount algorithm" id="unique">
+        <NumberedList
+          items={[
+            "Scope: the final total must be unique per bank account among active orders (pending or proof_submitted), plus orders that expired within the last 48 hours, so late transfers still match.",
+            "Suffix: add 1 to 999 rupiah to the order total; the seller receives slightly more. Skip suffixes ending in 00. Option in settings to subtract instead (discount mode).",
+            "Selection: random among free suffixes, not sequential, so customers cannot guess other orders.",
+            "Concurrency: a Postgres partial unique index on (bank_account_id, total_due) for active orders; on conflict, retry with another suffix (max 5 tries).",
+            "Expiry: default payment deadline 24 hours or the batch cutoff plus 2 hours, whichever is sooner; the seller can set it per batch or turn it off.",
+            "Release: a suffix is free again 48 hours after an order expires or is cancelled, and immediately after it is paid.",
+            "Capacity: about 990 active orders per distinct base total per bank account; on exhaustion widen to 1.001 to 1.999, then suggest a second bank account.",
+            "Display: show the amount large, split as 45.0 and 23 with the last 3 digits highlighted, and copy only digits (45023).",
+            "Top-ups to us use the same function against our own bank account.",
+          ]}
+        />
+        <CodeBlock>{algoCode}</CodeBlock>
+      </Section>
+
+      <Section heading="11. Order total and custom extra charges" id="charges">
+        <Text>Sellers add their own named cost lines on top of product prices: ongkir, packing, kantong plastik, biaya layanan, or any label. Each one shows as its own line everywhere the order appears, so the unique transfer amount already includes it.</Text>
+        <Section heading="Calculation order">
+          <Steps
+            steps={[
+              { title: "Items subtotal", detail: "Sum of unit price × quantity from the batch prices" },
+              { title: "Campaign discount", detail: "Seller campaign applied to the subtotal, never below Rp 0" },
+              { title: "Extra charges", detail: "Each applicable charge computed on the discounted subtotal or quantities, then waivers applied" },
+              { title: "Unique-amount suffix", detail: "Added last, on the base total, by the algorithm in section 10" },
+            ]}
+          />
+          <CodeBlock>{`discounted = max(items_subtotal - campaign_discount, 0)
+for c in effective_charges(batch, store, brand, fulfilment_method, opted_in):
+    basis = 1                        if c.apply_level == per_order
+            total_qty                if c.apply_level == per_item
+            qty_of(c.products)       if c.apply_level == per_product
+    amt = c.amount_rp * basis                                    if c.amount_type == fixed
+          ceil(discounted_or_product_subtotal * c.percent_bps / 10000) if c.amount_type == percent
+    amt = min(amt, c.max_amount_rp) if c.max_amount_rp
+    if c.waive_min_subtotal_rp and discounted >= c.waive_min_subtotal_rp: amt = 0, waived
+    if c.waivable_by_campaign and campaign.free_ongkir:              amt = 0, waived
+base_total = discounted + sum(amt)
+total_due  = base_total + unique_suffix
+// Resolution: batch row > store row > brand default (matched by overrides_charge_id); is_disabled removes it`}</CodeBlock>
+        </Section>
+        <Section heading="Example breakdown">
+          <Table
+            columns={["Line", "Rule", "Amount"]}
+            rows={[
+              ["3x Salt Bread Original", "Rp 15.000 each", "Rp 45.000"],
+              ["2x Kopi Susu Literan", "Rp 20.000 each", "Rp 40.000"],
+              ["Subtotal", "", "Rp 85.000"],
+              ["Diskon Promo Gajian", "Campaign 10%", "-Rp 8.500"],
+              ["Ongkir", "Fixed per order, delivery only", "Rp 10.000"],
+              ["Packing", "Fixed per order", "Rp 2.000"],
+              ["Kantong plastik", "Rp 500 per item × 5", "Rp 2.500"],
+              ["Biaya layanan", "2% of Rp 76.500 (phase 2)", "Rp 1.530"],
+              ["Base total", "", "Rp 92.530"],
+              ["Kode unik", "Section 10", "Rp 23"],
+              ["Total transfer", "", "Rp 92.553"],
+            ]}
+          />
+          <Text>The Pesenin fee stays a flat 100 koin per paid order; extra charges belong to the seller and do not change it.</Text>
+        </Section>
+        <Section heading="Charge settings">
+          <Table
+            columns={["Setting", "Options", "Phase"]}
+            rows={[
+              ["Name", "Free text up to 30 characters; preset chips Ongkir, Packing, Kantong plastik, Biaya layanan", "MVP"],
+              ["Amount type", "Fixed Rp (MVP) or percentage with optional maximum", "Fixed MVP, percent phase 2"],
+              ["Apply level", "Per order (MVP), per item or quantity, per specific product", "Per order MVP, others Should"],
+              ["Fulfilment method", "Pickup, delivery or both", "MVP"],
+              ["Condition", "Waive at or above a minimum order; waive when a campaign gives free ongkir", "Phase 2"],
+              ["Required or optional", "Required, or optional with the customer opting in (Bungkus kado)", "Required MVP, optional phase 2"],
+              ["Scope", "Brand default, overridden or switched off per Store or PO batch", "Brand MVP, overrides Should"],
+              ["Meeting point", "waive_for_meeting_point drops the charge to Rp 0 or meeting_point_amount_rp when a mobile store accepts a stop request", "Phase 2"],
+            ]}
+          />
+        </Section>
+        <Section heading="Where charges appear">
+          <BulletList
+            items={[
+              "Customer order page: sticky summary with subtotal, discount, each charge, and the total before the unique code; choosing delivery makes Ongkir appear.",
+              "Optional charges (phase 2) are checkboxes with their price, for example Bungkus kado +Rp 5.000.",
+              "A waived charge (phase 2) shows its original price struck through and the reason, for example Ongkir Gratis (min. belanja Rp 100.000).",
+              "Order status page and seller order detail repeat the same lines from the snapshot.",
+              "Recap adds a Biaya tambahan block per batch: count and total per charge name, for example Ongkir 34 pesanan Rp 340.000; CSV export gets one column per charge.",
+              "WhatsApp templates get a {rincian} variable that lists items, discount, each charge and the unique code.",
+              "Seller settings: Biaya Tambahan list under each brand, with a live preview of a sample order; Store and batch screens show inherited charges with Ubah or Matikan.",
+            ]}
+          />
+        </Section>
+        <Section heading="WhatsApp templates">
+          <CodeBlock maxHeight={360}>{waCode}</CodeBlock>
+        </Section>
+        <Section heading="Extra charges acceptance criteria">
+          <CodeBlock maxHeight={480}>{`Feature: Custom extra charges
+  Scenario: Fixed per-order charges and delivery-only ongkir (MVP)
+    Given my brand has Packing Rp 2.000 per order and Ongkir Rp 10.000 for delivery only
+    When a customer orders Rp 45.000 of items with pickup
+    Then the summary shows Packing Rp 2.000 and no Ongkir, base total Rp 47.000
+    When the customer switches to delivery
+    Then Ongkir Rp 10.000 appears as its own line and the base total is Rp 57.000
+    And total_due is the base total plus a unique suffix
+
+  Scenario: Charges are snapshotted
+    Given an order was placed with Ongkir Rp 10.000
+    When I change Ongkir to Rp 12.000
+    Then the existing order, its status page, recap and WhatsApp message still show Rp 10.000
+    And only new orders use Rp 12.000
+
+  Scenario: Per-item charge (Should)
+    Given Kantong plastik is Rp 500 per item
+    When a customer orders 5 items
+    Then the line reads Kantong plastik 5 × Rp 500 = Rp 2.500
+
+  Scenario: Batch override (Should)
+    Given the brand Ongkir is Rp 10.000
+    When I set Ongkir to Rp 0 on batch "PO Lebaran"
+    Then orders in that batch show Ongkir Gratis and other batches still charge Rp 10.000
+
+  Scenario: Calculation order with discount and waiver (phase 2)
+    Given a 10% campaign and Ongkir waived at a minimum order of Rp 75.000
+    When items total Rp 85.000
+    Then the discount makes it Rp 76.500, Ongkir is waived because 76.500 >= 75.000
+    And the unique suffix is added after all charges
+
+  Scenario: Optional charge (phase 2)
+    Given Bungkus kado Rp 5.000 is optional and off by default
+    When the customer ticks it
+    Then it appears as a line and is saved with opted_in = true`}</CodeBlock>
+        </Section>
+      </Section>
+
+      <Section heading="12. Seller campaigns" id="campaigns">
+        <Text>Sellers run their own promos: a set period plus a minimum order unlocks a reward. Campaigns apply automatically at checkout and feed the campaign discount step in section 11.</Text>
+        <Section heading="Campaign settings">
+          <Table
+            columns={["Setting", "Options", "Priority"]}
+            rows={[
+              ["Name and banner text", "For example Promo Gajian, shown on brand, store and batch pages", "Must"],
+              ["Period", "starts_at and ends_at in the store time zone", "Must"],
+              ["Minimum order", "Items subtotal before extra charges", "Must"],
+              ["Reward", "Percent discount with optional maximum, or fixed Rp discount", "Must"],
+              ["Reward", "Free ongkir (waives charges marked waivable_by_campaign), or a free item", "Should"],
+              ["Scope", "Whole brand or selected PO batches", "Must"],
+              ["Scope", "Selected stores or products", "Should"],
+              ["Limits", "Total redemptions, per customer by WhatsApp number", "Could (phase 2)"],
+              ["Activation", "Automatic; promo codes typed by the customer", "Automatic Must, codes phase 2"],
+            ]}
+          />
+        </Section>
+        <Section heading="Rules">
+          <BulletList
+            items={[
+              "One campaign per order; if several qualify, the one with the larger discount wins and is named on the order.",
+              "Statuses: draft, scheduled, active, paused, ended; the worker moves them at starts_at and ends_at.",
+              "The discount never takes the subtotal below Rp 0; extra charges and the unique code come after it.",
+              "A free item is an order line at Rp 0 flagged is_free_item; it counts in the recap and uses batch quota.",
+              "The order snapshots campaign_id, name, reward and discount; later edits never change existing orders.",
+              "The Pesenin fee stays 100 koin per paid order with or without a campaign.",
+            ]}
+          />
+        </Section>
+        <Section heading="UI notes">
+          <BulletList
+            items={[
+              "Seller: Kampanye list per brand with status chips, a simple form (name, period, minimum, reward, scope) and a live preview.",
+              "Customer: banner with the rule and end date, for example Diskon 10% min. Rp 75.000, s.d. 30 Nov.",
+              "Below the minimum the summary nudges: Tambah Rp 12.000 lagi untuk diskon 10%.",
+              "Report per campaign: orders, revenue, total discount, average order value against the 30 days before.",
+            ]}
+          />
+        </Section>
+        <Section heading="Campaign acceptance criteria">
+          <CodeBlock maxHeight={420}>{`Feature: Seller campaigns
+  Scenario: Minimum order unlocks a percentage discount
+    Given "Promo Gajian" runs 25 Nov 00:00 to 30 Nov 23:59 WIB, minimum Rp 75.000, 10% off, max Rp 15.000
+    When a customer's items total Rp 85.000 on 27 Nov
+    Then the summary shows Diskon Promo Gajian -Rp 8.500 before extra charges
+
+  Scenario: Below the minimum
+    When items total Rp 63.000
+    Then no discount applies and the page shows "Tambah Rp 12.000 lagi untuk diskon 10%"
+
+  Scenario: Outside the period
+    When an order is placed on 1 Dec
+    Then no discount applies even if the batch is still open
+
+  Scenario: Best campaign wins
+    Given two campaigns qualify
+    Then only the larger discount applies and its name is saved on the order
+
+  Scenario: Snapshot
+    Given an order got -Rp 8.500
+    When I change the campaign to 5%
+    Then that order still shows -Rp 8.500
+
+  Scenario: Free ongkir (Should)
+    Given the reward is free ongkir and Ongkir is waivable_by_campaign
+    When the order qualifies
+    Then Ongkir shows Gratis (Promo Gajian)`}</CodeBlock>
+        </Section>
+      </Section>
+
+      <Section heading="13. Unique URLs and QR codes" id="links">
+        <Table
+          columns={["Link", "Pattern", "Example"]}
+          rows={[
+            ["Brand", "/{brand}", "pesenin.product.biz.id/roti-rina"],
+            ["Store", "/{brand}/{store}", "pesenin.product.biz.id/roti-rina/kantor"],
+            ["PO batch", "/{brand}/po/{code}", "pesenin.product.biz.id/roti-rina/po/sb-0412"],
+            ["Order status", "/o/{token}", "Private, 22-character random token"],
+            ["Channel tag", "?src=", "pesenin.product.biz.id/roti-rina/kantor?src=ig"],
+          ]}
+        />
+        <Section heading="Slug rules">
+          <BulletList
+            items={[
+              "Lowercase a-z, 0-9 and hyphens, 3 to 30 characters, no leading, trailing or double hyphens; input is normalised (Roti Rina! becomes roti-rina).",
+              "Brand slugs are unique across Pesenin; store slugs are unique within their brand.",
+              "Reserved words for brands: app, api, admin, o, q, privasi, syarat, login, help, bantuan, blog, static, id, en, pesenin and similar; for stores also po.",
+              "Availability check while typing (debounced 300 ms) with up to 3 suggestions.",
+              "Editable any time, at most 3 renames per 30 days.",
+              "After a rename the old slug 301-redirects to the new one for 90 days (query string kept) and stays reserved for the same owner for those 90 days.",
+              "The rename dialog warns how many QR codes were downloaded for the old link.",
+            ]}
+          />
+        </Section>
+        <Section heading="QR generator">
+          <Table
+            columns={["Feature", "Detail", "Priority"]}
+            rows={[
+              ["QR for any link", "Brand, store or PO batch, from a QR button next to each link", "Must"],
+              ["PNG download", "1024 px for screens and 2048 px for print, quiet zone included, error correction M (H when a logo is in the centre)", "Must"],
+              ["Copy and share", "Copy link, share to WhatsApp (wa.me with text), share sheet for Instagram and others", "Must copy and WhatsApp, share sheet Should"],
+              ["SVG download", "Vector file for printers", "Should"],
+              ["Social templates", "Instagram story 1080×1920, square post 1080×1080, A6 table stand (1240×1748 px at 300 dpi) with brand name, logo, Pesan di sini and the short URL", "Should"],
+              ["Brand colour", "Optional; falls back to black if contrast against white is too low", "Should"],
+              ["Channel tag", "Presets ig, wa, tiktok, print or custom, added as ?src=", "Should"],
+              ["Stable QR links", "/q/{code} that always resolves to the current slug, so printed QRs survive renames", "Could (phase 2)"],
+            ]}
+          />
+          <Text>QR codes are drawn in the browser with the qrcode library (PNG on a canvas and SVG as text) and templates are composed on a canvas, so generation costs nothing on the server and works offline in the PWA. Go can render the same PNG with skip2/go-qrcode for link previews or a print endpoint.</Text>
+        </Section>
+        <Section heading="Channel tracking">
+          <BulletList
+            items={[
+              "The landing page keeps ?src in session storage through checkout and saves it on the order as source.",
+              "Report Pesanan per sumber: orders, paid orders and revenue by source per brand and store.",
+              "Orders without a tag count as direct.",
+            ]}
+          />
+        </Section>
+        <Section heading="UI notes">
+          <BulletList
+            items={[
+              "Every brand, store and batch screen shows its link with Salin, Bagikan and QR buttons.",
+              "QR sheet: live preview, format chips (PNG, SVG, Story, Post, Stand), optional colour and channel tag, Unduh button.",
+              "Slug field shows the full URL as you type with Tersedia or Sudah dipakai and suggestions.",
+              "The public store page that a QR opens shows the live open or closed status (section 14).",
+            ]}
+          />
+        </Section>
+        <Section heading="URL and QR acceptance criteria">
+          <CodeBlock maxHeight={420}>{`Feature: Unique URLs
+  Scenario: Availability check while typing
+    When I type "Roti Rina!" as my brand slug
+    Then it becomes "roti-rina" and I see Tersedia or Sudah dipakai with up to 3 suggestions
+
+  Scenario: Reserved words
+    When I type "admin" or "api"
+    Then I see "Nama ini tidak bisa dipakai"
+
+  Scenario: Store slug unique within a brand
+    Given brand roti-rina has store "kantor"
+    Then another brand can use "kantor" but roti-rina cannot add a second "kantor"
+
+  Scenario: Rename keeps old links working
+    Given I rename brand "roti-rina" to "rotirina"
+    When someone opens /roti-rina/kantor?src=ig within 90 days
+    Then they get a 301 redirect to /rotirina/kantor?src=ig
+    And nobody else can claim "roti-rina" during those 90 days
+
+Feature: QR generator
+  Scenario: Download PNG (Must)
+    When I tap QR on store Kantor
+    Then I can download 1024 px and 2048 px PNGs that scan to pesenin.product.biz.id/rotirina/kantor
+
+  Scenario: Story template (Should)
+    When I choose Instagram story
+    Then I get a 1080x1920 PNG with brand name, logo, "Pesan di sini", the short URL and the QR
+
+  Scenario: Channel tracking (Should)
+    Given I made a QR with src=ig
+    When a customer scans it and orders
+    Then the order source is "ig" and the source report counts it`}</CodeBlock>
+        </Section>
+      </Section>
+
+      <Section heading="14. Store hours and mobile stores" id="hours">
+        <Text>Customers should never travel to a closed store. Every store shows a live open or closed status, and stores that move, like gerobak kopi or tukang bakso, can share where they are and accept stop requests.</Text>
+        <Section heading="Store open and closed status (MVP)">
+          <BulletList
+            items={[
+              "Weekly hours per day with multiple ranges (07:00 to 11:00 and 16:00 to 21:00); ranges past midnight allowed.",
+              "Special dates override the week: holidays, closures, or special hours for one date or a date range.",
+              "One-tap override in the seller app: Buka sekarang or Tutup sementara, optional reason (Habis, Hujan, Libur), auto-revert at a chosen time or at the next scheduled change.",
+              "Computed status: Buka, Segera tutup (30 minutes or less before closing), Tutup, Buka pukul HH:MM (or Buka Senin 07:00).",
+              "Time zone per store, default Asia/Jakarta (WITA and WIT supported).",
+              "Toggle Terima pre-order saat tutup (default on): open PO batches keep taking orders with a note that they are processed when the store opens.",
+              "Shown on the public brand page (a chip per store), the store page, the QR landing and the PO batch page.",
+              "The server sends hours and the active override with the page; the browser recomputes the status every minute, so cached pages stay correct.",
+              "Reminder to the seller if the store still shows Buka 30 minutes after scheduled closing (Should).",
+            ]}
+          />
+        </Section>
+        <Section heading="Mobile stores (phase 2)">
+          <BulletList
+            items={[
+              "Store type: fixed or mobile. A mobile store has planned route spots (day, time window, spot name, pin) instead of one address.",
+              "Go live: Mulai jualan keliling starts sharing location through PWA geolocation, sent every 30 to 60 seconds or after moving 50 m, low accuracy mode, paused when the page is hidden.",
+              "Auto-stop after 20 minutes without movement or interaction, after 4 hours, or when the seller taps Selesai or Tutup.",
+              "Public map: current pin, last update time, rough ETA from straight-line distance, and the next planned spots; Buka di Google Maps opens navigation.",
+              "Ikuti and notify when nearby: later, with web push and customer consent.",
+              "Stop request: the customer drops a pin, adds a note and optionally attaches an order; the seller accepts with an ETA or declines with a reason; pending requests expire after 30 minutes.",
+              "Nearby requests within about 150 m are grouped so the seller makes one stop.",
+              "An accepted request becomes a meeting point: charges with the waive_for_meeting_point rule drop to Rp 0 or to meeting_point_amount_rp (for example Ongkir Rp 10.000 becomes Rp 0).",
+            ]}
+          />
+        </Section>
+        <Section heading="Live location design">
+          <Table
+            columns={["Topic", "Decision"]}
+            rows={[
+              ["Transport", "Seller posts updates; customers subscribe with Server-Sent Events from Go; polling every 30 s as fallback; no WebSocket needed"],
+              ["Fan-out", "In-memory pub/sub in the single Go instance; Postgres LISTEN/NOTIFY when there is more than one instance"],
+              ["Storage", "Only the latest point per store in store_locations, deleted when live ends; no location history"],
+              ["Map", "Leaflet with OpenStreetMap data through a free-tier tile host (MapTiler or Stadia); Google Maps JS costs per map load after a free quota, so use it only for the free navigation deep link"],
+              ["Battery", "Low accuracy, throttled sends, Screen Wake Lock only while the seller keeps the map open"],
+              ["Background", "Browsers stop location when the PWA is in the background; the app says so and auto-stops rather than showing a stale pin"],
+            ]}
+          />
+        </Section>
+        <Section heading="Privacy">
+          <BulletList
+            items={[
+              "The seller agrees once before the first live session; location is shared only while live.",
+              "Optional approximate mode rounds the public pin to about 100 m.",
+              "Customer stop-request pins are deleted 7 days after the request closes; only counts are kept for reports (UU PDP data minimisation).",
+              "live_sessions keep start, end and reason but no coordinates.",
+            ]}
+          />
+        </Section>
+        <Section heading="Hours and mobile acceptance criteria">
+          <CodeBlock maxHeight={480}>{`Feature: Store status
+  Scenario: Computed status
+    Given store Kantor is open Mon-Fri 07:00-11:00 and 16:00-21:00 WIB
+    When a customer opens the store page on Tuesday at 10:40
+    Then the chip shows "Segera tutup · 11:00"
+    And at 11:05 it shows "Tutup · Buka pukul 16:00" without a reload
+
+  Scenario: Manual override with auto-revert
+    When I tap Tutup sementara with reason "Habis" until 14:00
+    Then the public page shows "Tutup sementara · Habis"
+    And at 14:00 the status follows the weekly hours again
+
+  Scenario: Holiday
+    Given 25 Dec is set as closed
+    Then that day shows "Tutup · Libur" and the next opening time
+
+  Scenario: Pre-orders while closed
+    Given Terima pre-order saat tutup is on and the store is closed
+    When a customer opens an open PO batch
+    Then they can order and see "Toko sedang tutup, pesanan diproses saat buka"
+
+Feature: Mobile store (phase 2)
+  Scenario: Go live
+    Given my store is mobile and I tap Mulai jualan keliling
+    Then my pin appears on the public map within 60 seconds and updates while I move
+    And sharing stops after 20 minutes without movement and the pin disappears
+
+  Scenario: Stop request becomes a meeting point
+    Given Ongkir Rp 10.000 has waive_for_meeting_point
+    When a customer requests a stop at a pin with an attached order and I accept with ETA 10 minutes
+    Then the customer sees "Diterima · sekitar 10 menit"
+    And the attached order shows Ongkir Gratis (titik temu) and a new total with its unique code
+
+  Scenario: Request expiry
+    When I do not respond within 30 minutes
+    Then the request expires and the customer can send a new one`}</CodeBlock>
+        </Section>
+      </Section>
+
+      <Section heading="15. Push notifications" id="notifications">
+        <Text>Sellers hear about new orders and transfer proofs within seconds, even with the app closed. Customers who sign in or opt in hear when their payment is confirmed and their order is ready. Push is Web Push through the PWA service worker, so there is no native app and no per-message cost.</Text>
+        <Section heading="Channels">
+          <Table
+            columns={["Channel", "Use", "Priority"]}
+            rows={[
+              ["Web Push (service worker + VAPID)", "Real-time alerts to sellers and opted-in customers; sent from Go with SherClockHolmes/webpush-go", "Must for seller core events"],
+              ["In-app notification center", "Bell with unread badge; every notification is stored and readable here, push or not", "Must"],
+              ["WhatsApp click-to-send", "Seller-to-customer messages stay wa.me links (no WhatsApp API)", "Must (existing)"],
+              ["Email", "Top-up approved or rejected, as a backup to push", "Should"],
+            ]}
+          />
+        </Section>
+        <Section heading="Platform support">
+          <BulletList
+            items={[
+              "Android (Chrome, Edge, Firefox, Samsung Internet) and desktop browsers: push works in the browser and in the installed PWA.",
+              "iPhone and iPad: only iOS and iPadOS 16.4 or later, and only after the PWA is added to the home screen; Safari tabs cannot receive push.",
+              "On iOS the app shows an in-app prompt, Pasang Pesenin ke layar utama, with the Share then Add to Home Screen steps, then asks for permission inside the installed app.",
+              "Permission is asked only after a user tap at a meaningful moment: sellers after publishing their first PO link, customers after placing an order (Kabari saya). Never on first page load.",
+              "If permission is denied or unsupported, the in-app center, email for top-ups and WhatsApp links still cover every event.",
+            ]}
+          />
+        </Section>
+        <Section heading="Events">
+          <Table
+            columns={["Event", "Recipient", "Priority", "Opens"]}
+            rows={[
+              ["New order", "Seller", "Must", "Order detail"],
+              ["Transfer proof uploaded", "Seller", "Must", "Order detail with proof"],
+              ["PO at 80% of quota or 1 hour before cutoff", "Seller", "Should (P2)", "Batch"],
+              ["PO closed or sold out", "Seller", "Should (P2)", "Recap"],
+              ["Low koin balance (under 500), at most once a day", "Seller", "Should (P2)", "Isi Koin"],
+              ["Top-up approved or rejected", "Seller", "Should (P2)", "Wallet"],
+              ["Stop request", "Seller", "P3", "Stop requests"],
+              ["New review on my store", "Seller", "Should (P2)", "Review with Balas button"],
+              ["Achievement unlocked or streak at risk", "Seller", "Should (P2)", "Pencapaian"],
+              ["Referred seller qualified, koin reward credited", "Seller", "Should (P2)", "Wallet"],
+              ["Review invite (on completion, one reminder on day 3)", "Customer", "Should (P2)", "Review form"],
+              ["Order received", "Customer", "Should", "Order status page"],
+              ["Payment confirmed or proof rejected", "Customer", "Should", "Order status page"],
+              ["Order ready for pickup", "Customer", "Should", "Order status page with pickup info"],
+              ["PO opening at a favorite store", "Customer", "P3, opt-in", "Batch page"],
+              ["Followed store opened", "Customer", "P3, opt-in", "Store page"],
+              ["Campaign started", "Customer", "P3, opt-in", "Brand page"],
+              ["Pickup or event reminder", "Customer", "P3", "Order status page"],
+            ]}
+          />
+        </Section>
+        <Section heading="Rules against spam">
+          <BulletList
+            items={[
+              "Preferences per user, per event and per channel (push, in-app, email); marketing-style events are off until the customer opts in.",
+              "Quiet hours per user, default 22:00 to 06:00 in their time zone: push is held and delivered as one summary when quiet hours end; the in-app center still updates.",
+              "Batching: more than 3 new orders on one batch within 5 minutes collapse into one push (5 pesanan baru di PO Salt Bread) using the same notification tag, so it replaces instead of stacking.",
+              "Rate limits: one push per event type per batch every 5 minutes; marketing at most 1 a day per store and 3 a week per customer.",
+              "Every notification has a dedupe_key, so retries never send twice; TTL 4 hours for order events and 24 hours for top-ups.",
+              "Payloads carry a short title, body and deep link only, no bank details or full phone numbers.",
+              "Guests opt in from the order status page; their subscription is tied to the order token and removed 30 days after the order completes.",
+            ]}
+          />
+        </Section>
+        <Section heading="Delivery pipeline">
+          <Steps
+            steps={[
+              { title: "Write", detail: "The business transaction (order created, proof uploaded, top-up approved) inserts a notifications row as an outbox in the same DB transaction" },
+              { title: "Pick up", detail: "A worker goroutine polls every 2 seconds with SELECT ... FOR UPDATE SKIP LOCKED" },
+              { title: "Decide", detail: "Applies preferences, quiet hours, batching and rate limits; marks held, batched or ready" },
+              { title: "Send", detail: "webpush-go sends to each subscription with VAPID keys from environment variables, TTL and urgency headers" },
+              { title: "Clean up", detail: "404 or 410 deletes the subscription; other errors retry 3 times with backoff, then mark failed" },
+            ]}
+          />
+          <Text>The same notifications table feeds the in-app center, so nothing is lost when push is unavailable. Move to River (Postgres queue) only if volume needs it.</Text>
+        </Section>
+        <Section heading="UI notes">
+          <BulletList
+            items={[
+              "Seller header: bell with unread count next to the koin badge; the list groups by day and opens the deep link.",
+              "Settings, Notifikasi: toggles per event, quiet hours, a Kirim tes button, and the device list with Hapus.",
+              "Soft prompt before the browser prompt: Aktifkan notifikasi supaya tidak ketinggalan pesanan baru, with Nanti and Aktifkan.",
+              "Customer status page: Kabari saya button for guests; signed-in customers manage it in Pesanan saya.",
+              "If the seller has push off, the inbox shows a gentle banner once a week, never more.",
+            ]}
+          />
+        </Section>
+        <Section heading="Notification acceptance criteria">
+          <CodeBlock maxHeight={460}>{`Feature: Push notifications
+  Scenario: New order reaches the seller (Must)
+    Given I enabled push on my Android phone and closed the app
+    When a customer places an order in my open batch
+    Then within 10 seconds I get "Pesanan baru PS-7F3K2 · Rp 45.023"
+    And tapping it opens the order detail in the app
+    And the same item appears in my notification center
+
+  Scenario: Burst of orders is batched
+    When 6 orders arrive in 3 minutes on PO Salt Bread
+    Then I see one notification that updates to "6 pesanan baru di PO Salt Bread"
+
+  Scenario: Quiet hours
+    Given my quiet hours are 22:00 to 06:00
+    When 4 proofs are uploaded at 23:30
+    Then no push arrives at night and at 06:00 I get "4 bukti transfer menunggu dicek"
+
+  Scenario: iPhone not installed
+    Given I use Safari on iOS 17 without adding Pesenin to the home screen
+    When I open notification settings
+    Then I see the Pasang Pesenin ke layar utama steps instead of the permission button
+
+  Scenario: Expired subscription
+    When the push service returns 410 for my old phone
+    Then that subscription is deleted and no further sends are tried
+
+  Scenario: Guest customer opt-in (Should)
+    Given I ordered as a guest and tapped Kabari saya
+    When the seller marks my order paid
+    Then I get "Pembayaran diterima" and tapping opens my order status page`}</CodeBlock>
+        </Section>
+      </Section>
+
+      <Section heading="16. Sharing and community" id="sharing">
+        <Text>Pesenin grows the way home food already grows: WhatsApp groups, komplek neighbours, office friends and weekend bazaars. Sharing is built into every success moment, and community features push activity offline, toward pickup spots and meetups, not endless scrolling.</Text>
+        <Section heading="Features">
+          <Table
+            columns={["Feature", "What it does", "Phase"]}
+            rows={[
+              ["Rich link previews", "Open Graph images per brand, store and PO so links pasted in WhatsApp groups show photo, price and cutoff", "P1 Must"],
+              ["Share cards", "Auto-generated 1080x1920 (story) and 1080x1080 (feed) images for a PO (photo, price, cutoff, quota bar, QR), a store (hours, open status, grade) and moments like Sold out; shared through the Web Share API with the image file, fallback download plus wa.me text", "P2 Should"],
+              ["Customer share after ordering", "Status page button Ajak teman ikut PO with a personal ?ref= code; the seller sees which customers bring orders", "P2 Should"],
+              ["Seller referral (Ajak seller)", "Each account has a code; when an invited seller reaches 20 paid orders, both get 5.000 koin (setting); capped at 10 rewards a month", "P2 Should"],
+              ["Made with Pesenin footer", "Small footer link on every public page and share card that leads to seller sign-up with the seller's referral code", "P2 Should"],
+              ["Top sharers per brand", "Seller sees customers whose ref links produced the most paid orders, to thank them offline", "P2 Could"],
+              ["Kumpul (offline events and pickup spots)", "Seller or community host creates a bazaar, pop-up, CFD stall or meetup with date, place, participating stores, own URL and QR; customers tap Datang; PO batches can use the event or a campus or office spot as the pickup point", "P3"],
+              ["Patungan (group order)", "One person opens a shared cart for an office or komplek, friends add items, one pickup and one delivery charge split across the group", "P3"],
+              ["Community pages", "Pages for a komplek, campus or office area listing member stores and upcoming Kumpul events", "P3"],
+            ]}
+          />
+        </Section>
+        <Section heading="Rules">
+          <BulletList
+            items={[
+              "Every share link carries ?src= (channel) and optional ?ref= (person); both are snapshotted on the order as source and ref_code.",
+              "Referral koin is paid only after the invited seller is real: 20 paid orders, different Google account, different bank account and phone; self-referrals are blocked and logged.",
+              "Customer referrals give no money, only recognition for the seller to act on offline, which avoids reward farming.",
+              "Share cards never include customer names or phone numbers; sold-out cards show counts, not buyers.",
+              "Kumpul event locations are public places only; home addresses are never shown on event pages.",
+            ]}
+          />
+        </Section>
+        <Section heading="UI notes">
+          <BulletList
+            items={[
+              "Share button sits next to every PO, store and badge, with Story, Feed, WhatsApp and Copy link.",
+              "After a seller publishes a PO: a full-screen card preview with Bagikan sekarang as the main button.",
+              "Customer status page after paid: Ajak teman ikut PO ini with the card and their personal link.",
+              "Account, Ajak seller: code, link, invited sellers with progress to 20 orders, and rewards earned.",
+            ]}
+          />
+        </Section>
+        <Section heading="Sharing acceptance criteria">
+          <CodeBlock maxHeight={360}>{`Feature: Share cards and referrals (Phase 2)
+  Scenario: Seller shares a PO to Instagram story
+    Given my PO Salt Bread is open with 80 of 100 sold
+    When I tap Bagikan, then Story
+    Then a 1080x1920 image with photo, price, cutoff, quota bar and QR is created
+    And the phone share sheet opens with that image
+
+  Scenario: Customer brings a friend
+    Given Rina paid her order and taps Ajak teman ikut PO ini
+    When her friend orders from the shared link
+    Then the friend's order has ref_code of Rina and source wa
+
+  Scenario: Seller referral reward
+    Given Bu Sari invited Dewi with her code
+    When Dewi reaches 20 paid orders with her own Google and bank account
+    Then both accounts get 5.000 koin as referral_reward once
+
+  Scenario: Self-referral blocked
+    When an invited account uses the same bank account as the inviter
+    Then no reward is paid and the case appears in the admin queue`}</CodeBlock>
+        </Section>
+      </Section>
+
+      <Section heading="17. Light gamification" id="game">
+        <Text>Running a PO should feel a little like a cozy shop game, where every point is real progress. Phase 2 keeps it light: progress bars, celebrations, a handful of badges and a weekly streak. The shop map, levels and customer stamps come in Phase 3.</Text>
+        <Callout tone="warning" lead="Guardrail: effort, never chance">Rewards come only from real activity such as paid orders, streaks and fast payment checks. No loot boxes, spin wheels, mystery rewards or anything bought with koin for a chance to win, which would be close to gambling under Indonesian law. Koin rewards are capped at 10.000 koin per account per month; everything else is cosmetic.</Callout>
+        <Section heading="Features">
+          <Table
+            columns={["Feature", "What it does", "Phase"]}
+            rows={[
+              ["PO as a quest", "Progress bar (80/100 terjual) and countdown to cutoff on the seller batch card and the public page", "P2 Should"],
+              ["Sold-out celebration", "Confetti and a shareable Habis terjual badge card when a batch hits its quota", "P2 Should"],
+              ["Achievements", "Six badges: Pesanan pertama, 10 lunas, 100 lunas, 1.000 lunas, Kilat (median proof-to-paid under 1 hour in a week), Jam buka lengkap; some give 500 to 2.000 koin", "P2 Should"],
+              ["Weekly streak", "Counts consecutive weeks with at least one PO that got a paid order; reminder push if the week is about to break it", "P2 Should"],
+              ["Koin chest", "Wallet animation: the chest fills on top-up and drops one coin per paid order", "P2 Could"],
+              ["Shop map and levels", "Each brand is a building and each store a stall on the seller map; levels from Gerobak to Warung to Toko to Kafe grow with paid orders; new slots appear as empty plots to build", "P3"],
+              ["Customer stamps", "Pesanan ke-5 di Roti Bunda style stamp card per brand; seller sets an optional reward through a campaign", "P3"],
+            ]}
+          />
+        </Section>
+        <Section heading="Rules">
+          <BulletList
+            items={[
+              "Achievement checks run in the outbox worker after paid, completed and top-up events; each unlock is idempotent per account and code.",
+              "Achievement koin is credited as achievement_reward in the ledger with key achievement:account:code.",
+              "Only paid orders that are not flagged as self-orders count toward badges and levels.",
+              "Badges show on the seller profile and public brand page; sellers can hide them.",
+              "Animations respect prefers-reduced-motion and stay under 1 second.",
+            ]}
+          />
+        </Section>
+        <Section heading="Gamification acceptance criteria">
+          <CodeBlock maxHeight={300}>{`Feature: Achievements (Phase 2)
+  Scenario: First 10 paid orders
+    Given my account has 9 paid orders
+    When I mark the 10th order paid
+    Then I unlock 10 lunas, see a short celebration and get 1.000 koin once
+
+  Scenario: Monthly cap
+    Given my account earned 10.000 koin from achievements this month
+    When I unlock another koin badge
+    Then the badge unlocks but no more koin is credited this month
+
+  Scenario: Sold out
+    When the 100th order on a batch with quota 100 is placed
+    Then I see Habis terjual with a share card button`}</CodeBlock>
+        </Section>
+      </Section>
+
+      <Section heading="18. Verified reviews and Pesenin grade" id="reviews">
+        <Text>Customers want to know a store is good before ordering, and sellers want proof of their quality. Only real customers with a finished order can review, and ratings use a simple Pesenin grade inspired by Michelin stars: 1 to 3 Mangkok (bowl) icons. Core reviews ship in Phase 2 (Should); photos, quick tags, recency weighting and Pesenin Pick follow in Phase 3.</Text>
+        <Section heading="Pesenin grade">
+          <Table
+            columns={["Rating", "Label", "Meaning"]}
+            rows={[
+              ["🥣", "Oke", "Fine, as expected"],
+              ["🥣🥣", "Enak", "Good, would order again"],
+              ["🥣🥣🥣", "Wajib coba", "Excellent, worth a special trip"],
+            ]}
+          />
+          <BulletList
+            items={[
+              "Store aggregate shows as 2,6 Mangkok · Enak · 18 ulasan on the store page, QR landing page and share cards; brand pages show the average across stores.",
+              "The grade appears only after at least 5 published reviews; before that the store shows Belum ada cukup ulasan.",
+              "Phase 2 aggregate is a plain average of published reviews; label: under 1,75 Oke, 1,75 to 2,49 Enak, 2,5 and above Wajib coba.",
+              "Phase 3 recency weighting: each review weighs 0,5 raised to (age in days / 180), so recent quality counts more.",
+              "Phase 3 Pesenin Pick badge: at least 20 reviews in 6 months, weighted grade 2,7 or more, 70% or more 3-Mangkok, no upheld abuse reports; checked monthly.",
+              "Name and icon are an open question; the alternative is Sendok (spoon).",
+            ]}
+          />
+        </Section>
+        <Section heading="Who can review">
+          <BulletList
+            items={[
+              "Valid order only: payment_status paid AND fulfilment_status picked_up or delivered.",
+              "One review per order, written within 14 days after completion; the customer can edit it once inside that window.",
+              "Guests review through the order token link, no account needed; signed-in customers see Beri ulasan in Pesanan saya.",
+              "Invites: banner on the order status page at completion, review invite push for opted-in customers, and a Minta ulasan wa.me template the seller can send.",
+              "A review has a rating (required) and short text up to 280 characters (optional); Phase 3 adds one photo and quick tags: Enak, Tepat waktu, Packing rapi, Ramah, Sesuai foto.",
+            ]}
+          />
+        </Section>
+        <Section heading="Seller reply and moderation">
+          <BulletList
+            items={[
+              "The seller can post one public reply per review, editable for 24 hours.",
+              "Sellers cannot edit, hide or delete reviews; they can report one with a reason (kasar, spam, bukan pelanggan, data pribadi, lainnya).",
+              "Reported reviews stay visible until the super admin decides; the moderation queue offers Keep, Hide (removed from the grade) or Remove for personal data.",
+              "Customers can delete their own review at any time (PDP Law); the grade recalculates.",
+            ]}
+          />
+        </Section>
+        <Section heading="Anti-fraud">
+          <BulletList
+            items={[
+              "Verified orders only, so nobody can review without paying and receiving the order.",
+              "Self-review flag: if the order's WhatsApp number or Google account matches the seller, their staff or the brand's bank holder name, the review is held as pending_moderation and excluded from the grade.",
+              "Rate limits: at most 5 reviews per phone number a day and 3 per store per phone number in 30 days.",
+              "Orders the seller created manually, cancelled orders and refunded orders are not eligible.",
+              "Sudden spikes (more than 10 reviews on one store in an hour) go to the admin queue.",
+            ]}
+          />
+        </Section>
+        <Section heading="UI notes">
+          <BulletList
+            items={[
+              "Review form is one screen: three large bowl buttons with labels, a text box, and Kirim; it opens straight from the push or WhatsApp link.",
+              "Store page: grade summary with a 1, 2 and 3 Mangkok bar breakdown, newest reviews with the Pembeli terverifikasi tag and the seller reply below.",
+              "Seller inbox tab Ulasan with unreplied first and a Balas button.",
+              "Admin panel: Laporan ulasan queue with the order, reason and both sides.",
+            ]}
+          />
+        </Section>
+        <Section heading="Review acceptance criteria">
+          <CodeBlock maxHeight={460}>{`Feature: Verified reviews (Phase 2)
+  Scenario: Guest reviews a finished order
+    Given my order PS-7F3K2 is paid and marked picked up today
+    When I open my order status link
+    Then I see Beri ulasan and can choose 3 Mangkok, write "Rotinya lembut" and send
+    And the review shows with Pembeli terverifikasi
+
+  Scenario: Not eligible before pickup
+    Given my order is paid but not yet picked up
+    Then I do not see the review form and the API returns 403 review_not_eligible
+
+  Scenario: Window closed
+    Given my order was completed 15 days ago
+    Then the review form is no longer available
+
+  Scenario: One review per order
+    Given I already reviewed PS-7F3K2
+    When I try to submit another review for it
+    Then the API returns 409 review_exists
+
+  Scenario: Grade hidden until 5 reviews
+    Given Store Utama has 4 published reviews
+    Then the store page shows Belum ada cukup ulasan instead of a grade
+
+  Scenario: Seller replies and reports
+    Given a review on my store
+    When I reply once
+    Then the reply shows under the review and I cannot add a second reply
+    And I can report but not delete the review
+
+  Scenario: Self-review held
+    Given the order phone matches my seller phone
+    When a review is submitted
+    Then it is held for moderation and not counted in the grade`}</CodeBlock>
+        </Section>
+      </Section>
+
+      <Section heading="19. Customer Trust Grade" id="trust">
+        <Text>Pesenin is built for offline handovers: customers pick up at a home, a stall or a meeting point. A seller who bakes 50 salt breads needs to know the buyer will pay on time and show up. The Customer Trust Grade turns verified order behaviour into a simple level that sellers see before they confirm, without ever shaming anyone in public.</Text>
+        <Section heading="Levels">
+          <Table
+            columns={["Level", "Rule (P2 basic)", "Who sees it"]}
+            rows={[
+              ["Baru", "Fewer than 3 completed paid orders on Pesenin; neutral, never a negative", "Seller and the customer"],
+              ["Terpercaya", "3 or more completed paid orders and a show-up rate of 90% or more in the last 12 months", "Seller and the customer"],
+              ["Langganan Setia", "10 or more completed paid orders, show-up rate 95% or more, at least 2 different sellers or 5 with one seller", "Seller and the customer"],
+              ["Perlu perhatian (private flag)", "2 or more no-shows confirmed by at least 2 different sellers in 90 days, or 1 upheld fake proof", "Sellers only, on the order detail; never on public pages; the customer sees a neutral tip to improve"],
+            ]}
+          />
+        </Section>
+        <Section heading="Signals">
+          <Table
+            columns={["Signal", "Source", "Phase", "Effect"]}
+            rows={[
+              ["Completed paid orders", "Order paid and marked picked up or delivered", "P2", "Positive"],
+              ["No-show", "Seller marks Tidak diambil with a reason code after the pickup window", "P2", "Negative"],
+              ["On-time payment", "Proof uploaded before the payment deadline", "P3", "Positive"],
+              ["Late cancellation", "Customer cancels after the payment deadline or after production started", "P3", "Negative"],
+              ["Rejected or fake proof", "Seller rejects proof as fake, confirmed by admin or by a second seller", "P3", "Strong negative"],
+              ["Seller private feedback", "Thumbs up or down after pickup with a fixed reason code, never free text shared with other sellers", "P3", "Small positive or negative; only counts when 3 or more sellers have rated"],
+            ]}
+          />
+          <BulletList
+            items={[
+              "Identity is the normalised WhatsApp number, linked to the Google account when the customer signs in; OTP-verified numbers (P3) weigh more.",
+              "P3 score uses decay: each event weighs 0,5 raised to (age in days / 180), so recent behaviour counts most; events older than 12 months drop out.",
+              "Only paid orders create trust events, so someone typing another person's number cannot create history for them without paying.",
+            ]}
+          />
+        </Section>
+        <Section heading="Seller tools">
+          <BulletList
+            items={[
+              "P2: grade chip and stats on the order detail and inbox row (Terpercaya · 12 selesai · 0 tidak datang) before the seller marks paid or starts production.",
+              "P2: Tandai tidak diambil button on the pickup checklist with reason codes (tidak datang, tidak bisa dihubungi, minta batal mendadak).",
+              "P3: rule to require full prepayment or a down payment (DP) for Baru or Perlu perhatian customers on a batch.",
+              "P3: opt-in auto-decline below a level the seller picks; the customer sees a polite message and the seller's WhatsApp link, never the reason.",
+            ]}
+          />
+        </Section>
+        <Section heading="Customer view and appeals">
+          <BulletList
+            items={[
+              "Signed-in customers (and guests through any order link) see Status kepercayaanmu: level, completed orders, show-up rate and tips such as Ambil pesanan sesuai jadwal.",
+              "P2: the customer can contact support from that page about any no-show; P3: a formal Ajukan banding flow with message and optional evidence photo per negative event.",
+              "Super admin reviews disputes, asks the seller for evidence, and voids the event if the appeal is upheld; the grade recalculates.",
+              "Customer badges tie into gamification in P3: Pembeli Kilat (pays within 1 hour), Selalu datang (10 pickups in a row), stamps per brand.",
+            ]}
+          />
+        </Section>
+        <Section heading="Anti-abuse and PDP Law">
+          <BulletList
+            items={[
+              "No single seller can tank a customer: a no-show from one seller only shows to that seller until a second seller confirms a similar event or it is a verified event (paid order, pickup window passed, reminder sent).",
+              "Sellers can mark at most 5 no-shows a day and must choose a reason; sellers with an unusual no-show rate are audited and can lose the feature.",
+              "Transparency: checkout and terms explain that order history builds a trust level; consent is part of the terms, and the customer can see every event behind their level.",
+              "Data minimisation: only counts, dates and reason codes; no free-text notes about customers are shared across sellers.",
+              "Retention: trust events are kept 12 months; on a deletion request the score and events are removed, while each seller keeps their own order records.",
+            ]}
+          />
+        </Section>
+        <Section heading="UI notes">
+          <BulletList
+            items={[
+              "Grade chip colours: Baru grey, Terpercaya green, Langganan Setia gold; Perlu perhatian is an amber outline icon with a tooltip, shown only in the seller app.",
+              "Tap the chip to see stats and a reminder that the level is based on Pesenin orders only.",
+              "Customer page uses encouraging copy: Sedikit lagi jadi Terpercaya, 1 pesanan selesai lagi.",
+            ]}
+          />
+        </Section>
+        <Section heading="Trust acceptance criteria">
+          <CodeBlock maxHeight={420}>{`Feature: Customer Trust Grade
+  Scenario: Seller sees grade before confirming (P2)
+    Given Rina has 12 completed paid orders and no no-shows
+    When her new order arrives in my inbox
+    Then I see Terpercaya · 12 selesai · 0 tidak datang on the order
+
+  Scenario: New customer is neutral (P2)
+    Given Dodi has never ordered on Pesenin
+    Then his order shows Baru with no warning
+
+  Scenario: One seller cannot flag alone (P2)
+    Given I mark Dodi as Tidak diambil
+    Then only my store sees the no-show
+    And other sellers see the flag only after a second seller confirms a no-show within 90 days
+
+  Scenario: Customer appeal (P3)
+    Given I have a no-show I think is wrong
+    When I tap Ajukan banding and the admin upholds it
+    Then the event is voided and my level recalculates
+
+  Scenario: Prepayment rule (P3)
+    Given my batch requires full prepayment for Baru customers
+    When a Baru customer orders
+    Then the order page asks for payment before the order is confirmed`}</CodeBlock>
+        </Section>
+      </Section>
+
+      <Section heading="20. Koin wallet and top-up" id="billing">
+        <Callout lead="Decision: 1 koin = Rp 1">A Rp 25.000 top-up gives 25.000 koin and a paid order costs 100 koin. The balance reads like rupiah, so there is no conversion to explain, and the price per order, the admin fee and any later price change stay whole numbers. The app shows the order equivalent next to the balance (25.000 koin, about 250 pesanan), so sellers still think in orders.</Callout>
+        <Properties
+          items={[
+            { label: "Coin unit", value: "1 koin = Rp 1, stored as bigint" },
+            { label: "Order fee", value: "100 koin per paid order (setting order_fee_koin)" },
+            { label: "Sign-up gift", value: "5.000 koin = 50 free orders (promo_free_credit)" },
+            { label: "Low-balance warning", value: "Under 500 koin (5 orders)" },
+            { label: "Grace floor", value: "-5.000 koin (50 orders of debt); orders never blocked" },
+            { label: "Wallet level", value: "Account, shared by all brands" },
+            { label: "Expiry", value: "Koin never expire; not cashable or transferable (terms)" },
+          ]}
+        />
+        <Section heading="Top-up options">
+          <Table
+            columns={["Option", "Amount", "Rule"]}
+            rows={[
+              ["Preset 1", "Rp 25.000", "25.000 koin, about 250 orders"],
+              ["Preset 2", "Rp 50.000", "50.000 koin, about 500 orders"],
+              ["Preset 3", "Rp 100.000", "100.000 koin, about 1.000 orders"],
+              ["Custom", "Rp 25.000 to Rp 1.000.000", "Multiples of Rp 1.000, so the unique code stays in the last 3 digits"],
+            ]}
+          />
+          <Text>No bonus tiers: every rupiah of top-up becomes one koin. Presets, the custom minimum, maximum and multiple are platform settings the super admin can change.</Text>
+        </Section>
+        <Section heading="Admin fee">
+          <BulletList
+            items={[
+              "Configurable, never hardcoded: stored in admin_fee_configs, editable only by the super admin.",
+              "Supports a fixed amount, a percentage, or both, with an optional minimum and maximum cap, per payment channel.",
+              "Versioned by effective date: a change creates a new row with effective_from (now or scheduled); old rows are never edited.",
+              "Added on top: the seller transfers top-up + admin fee + unique code and receives the full top-up as koin.",
+              "Shown as its own line before the seller confirms, on the transfer screen and in the top-up history.",
+              "Snapshotted on each top-up (config id, fixed, percent, amount), so a later fee change never alters an existing top-up.",
+              "Phase 2: a payment gateway or dynamic QRIS channel gets its own config row, so the gateway's fee is passed through the same variable.",
+            ]}
+          />
+          <CodeBlock>{`// whole rupiah; percent in basis points (100 bps = 1%)
+fee = cfg.fixed_rp + ceil(amount_rp * cfg.percent_bps / 10000)
+fee = max(fee, cfg.min_fee_rp)
+if cfg.max_fee_rp != nil { fee = min(fee, *cfg.max_fee_rp) }
+
+total_due_rp   = amount_rp + fee + unique_suffix   // fee added on top
+koin_to_credit = amount_rp + unique_suffix         // seller keeps the full top-up; the code they paid becomes koin too`}</CodeBlock>
+        </Section>
+        <Section heading="Example breakdown" caption="Example config only: Rp 1.000 fixed, 0%. The real value is a decision for Iping.">
+          <Table
+            columns={["Line", "Rp 25.000", "Rp 50.000", "Rp 100.000"]}
+            rows={[
+              ["Top-up", "Rp 25.000", "Rp 50.000", "Rp 100.000"],
+              ["Admin fee", "Rp 1.000", "Rp 1.000", "Rp 1.000"],
+              ["Unique code", "Rp 123", "Rp 37", "Rp 508"],
+              ["Total to transfer", "Rp 26.123", "Rp 51.037", "Rp 101.508"],
+              ["Koin received", "25.123", "50.037", "100.508"],
+              ["About how many orders", "251", "500", "1.005"],
+            ]}
+          />
+        </Section>
+        <Section heading="Top-up flow (MVP: manual transfer)">
+          <Steps
+            steps={[
+              { title: "Create", detail: "Seller picks an amount; API snapshots the active fee, assigns a unique amount on our bank account, status pending, expires_at = now + 24 h" },
+              { title: "Transfer", detail: "Screen shows our bank, account number and the exact total with copy buttons" },
+              { title: "Upload proof", detail: "Compressed image to R2; status awaiting_verification; super admin gets an email and a queue badge" },
+              { title: "Verify", detail: "Super admin checks the bank mutation; approve writes topup_credit once, or reject with a reason" },
+              { title: "Notify", detail: "In-app banner and email for approved, rejected, and a reminder 4 hours before a pending top-up expires" },
+            ]}
+          />
+          <Text>If the received amount differs from the expected total, the super admin approves with received_amount_rp and the koin are recalculated as received minus the snapshotted fee; the difference is audited. A pending top-up's unique amount stays reserved for 48 hours after expiry so a late transfer can still be matched.</Text>
+        </Section>
+        <Section heading="Ledger rules">
+          <BulletList
+            items={[
+              "Every koin movement is one immutable wallet_transactions row with a signed amount, balance_after and a unique idempotency_key.",
+              "Each write is one DB transaction: lock the wallet row, insert the ledger row (on duplicate key return the existing row), update the cached balance, write the audit row.",
+              "Types: promo_free_credit (+5.000 at sign-up), topup_credit, order_debit (-100), slot_purchase (extra brand or store), refund_credit, adjustment (plus or minus, reason required).",
+              "Order debit happens once, on the first transition to paid (key order_debit:{order_id}). Undoing paid does not refund; re-marking does not charge again.",
+              "Cancelling a paid order within 24 hours writes refund_credit of 100 koin; after that, no refund.",
+              "Below 0 koin: banner only. At or below -5.000 koin: recap, shopping list, export and new batches are soft-locked; incoming orders, status pages, proof uploads and marking paid always work, and debits keep accruing.",
+              "Corrections are new adjustment rows, never edits. A nightly job checks the cached balance against the ledger sum and alerts on any gap.",
+              "Accounting view: koin consumed by order_debit is revenue; unspent paid koin is a liability; the admin fee is recognised when the top-up is approved.",
+            ]}
+          />
+        </Section>
+        <Section heading="Super admin panel">
+          <Table
+            columns={["Screen", "What it does"]}
+            rows={[
+              ["Top-up queue", "Awaiting-verification list sorted by age, proof image, expected vs received amount, approve, approve with corrected amount, reject with reason"],
+              ["Admin fee", "Current config per channel, version history, create a new version now or scheduled, live preview on Rp 25.000, 50.000 and 100.000"],
+              ["Top-up settings", "Presets, custom min, max and multiple, expiry hours, platform bank accounts"],
+              ["Koin settings", "Order fee, sign-up free koin, grace floor, low-balance threshold, extra brand and store fees, slot billing mode"],
+              ["Wallet adjust", "Find an account, add or remove koin with a required reason; shows the resulting balance first"],
+              ["Reports", "By day or month: top-ups (count, Rp), admin fees, koin issued (paid, free, adjustments), koin used, outstanding koin, revenue, accounts below the floor; CSV export"],
+              ["Audit log", "Every approval, rejection, fee change, setting change and adjustment, with before and after values"],
+            ]}
+          />
+        </Section>
+        <Section heading="UI notes">
+          <BulletList
+            items={[
+              "Balance badge in the seller header on every screen, for example Koin 3.250 (about 32 pesanan); tap opens the wallet.",
+              "Under 500 koin: a yellow banner, Koin tinggal 4 pesanan lagi, with an Isi Koin button. Below 0: a banner that explains orders still come in.",
+              "At the grace floor: locked screens show what is locked and one Isi Koin button, never a blocked order.",
+              "Top-up screen: three preset chips plus Custom, then a breakdown that is always visible before Konfirmasi: top-up, admin fee, unique code, total, koin received.",
+              "Transfer screen: total shown large with the last 3 digits highlighted, copy buttons, and the expiry time in WIB.",
+              "Wallet screen: pending top-up card first, then the ledger with Indonesian labels: Gratis pendaftaran, Isi koin, Pesanan lunas PS-7F3K2, Pengembalian, Penyesuaian admin.",
+              "Always label units: Rp for money transferred, koin for balance.",
+            ]}
+          />
+        </Section>
+        <Section heading="Koin acceptance criteria">
+          <CodeBlock maxHeight={480}>{`Feature: Koin top-up
+  Scenario: Preset top-up shows the fee before payment
+    Given the active manual_transfer fee config is Rp 1.000 fixed and 0%
+    When I tap Isi Koin and choose Rp 50.000
+    Then I see Top-up Rp 50.000, Biaya admin Rp 1.000, a unique code, the total, and the koin I will receive
+    And no top-up record exists until I tap Konfirmasi
+
+  Scenario: Custom amount validation
+    When I enter Rp 24.000, Rp 1.001.000 or Rp 37.500
+    Then Konfirmasi is disabled with "Minimal Rp 25.000, maksimal Rp 1.000.000, kelipatan Rp 1.000"
+
+  Scenario: Fee change does not affect an existing top-up
+    Given I created a Rp 100.000 top-up with an admin fee of Rp 1.000
+    When the super admin publishes a new fee of Rp 2.500 effective now
+    Then my pending top-up still shows Rp 1.000 and the same total
+    And new top-ups use Rp 2.500
+
+  Scenario: Approval credits koin exactly once
+    Given a top-up of Rp 50.000 with unique code 37 is awaiting_verification
+    When the super admin approves it, and the request is retried
+    Then exactly one topup_credit of +50.037 koin is written
+    And the status is approved and I get an in-app and email notice
+
+  Scenario: Rejection
+    When the super admin rejects with reason "Bukti tidak terbaca"
+    Then the status is rejected, no koin are credited, and I see the reason with a Coba lagi button
+
+  Scenario: Expiry
+    Given a pending top-up with no proof
+    When 24 hours pass
+    Then the status is expired and its unique amount stays reserved for 48 more hours
+
+  Scenario: Low balance
+    Given my balance drops from 520 to 420 koin after a paid order
+    Then the low-balance banner appears and incoming orders are unaffected`}</CodeBlock>
+        </Section>
+      </Section>
+
+      <Section heading="21. Data model" id="data">
+        <Table columns={["Table", "Key fields", "Notes"]} rows={dataRows} />
+        <Text>All tables carry created_at and updated_at; ids are UUID v7 for sortable inserts; money is bigint rupiah; phone numbers are stored in E.164 (+62). Every seller query is scoped by account_id through brand ownership checks in one middleware.</Text>
+      </Section>
+
+      <Section heading="22. REST API outline" id="api">
+        <Table columns={["Method", "Path", "Purpose"]} rows={apiRows} />
+        <Text>{"Base URL: `https://pesenin.product.biz.id/api` (paths below are relative to it). JSON everywhere; errors as `{\"error\": {\"code\", \"message\"}}`; cursor pagination with `?cursor=&limit=`; mutations from the PWA check the Origin header and a CSRF token; public order creation requires an `Idempotency-Key` header."}</Text>
+      </Section>
+
+      <Section heading="23. Tech stack and architecture" id="stack">
+        <Callout lead="Frontend choice: SvelteKit PWA">SvelteKit gives server-rendered public pages, so WhatsApp shows a rich link preview and Google can index brand pages. It also gives an installable, app-like seller dashboard with the smallest JavaScript payload of the mainstream options, which is what low-end Android phones on 3G need. If the builder is already fluent in React, Next.js with the same PWA approach is the fallback; everything else in this PRD stays the same.</Callout>
+        <Table columns={["Layer", "Choice", "Reason"]} rows={stackRows} />
+        <Section heading="Architecture">
+          <Diagram
+            direction="horizontal"
+            nodes={[
+              { id: "cust", label: "Customer browser", kind: "person" },
+              { id: "sell", label: "Seller PWA", kind: "person" },
+              { id: "fe", label: "SvelteKit", detail: "Cloudflare Pages or Vercel" },
+              { id: "api", label: "Go API (chi)", detail: "Fly.io or VPS" },
+              { id: "db", label: "PostgreSQL", detail: "Neon or Supabase" },
+              { id: "r2", label: "Cloudflare R2", detail: "Transfer proofs" },
+              { id: "g", label: "Google OIDC" },
+              { id: "wa", label: "WhatsApp app", detail: "wa.me links", kind: "terminal" },
+            ]}
+            edges={[
+              { from: "cust", to: "fe", label: "SSR order page" },
+              { from: "sell", to: "fe" },
+              { from: "fe", to: "api", label: "/api proxy + cookie" },
+              { from: "api", to: "db" },
+              { from: "api", to: "r2", label: "presign" },
+              { from: "cust", to: "r2", label: "upload", dashed: true },
+              { from: "api", to: "g", label: "OAuth" },
+              { from: "sell", to: "wa", dashed: true },
+            ]}
+          />
+          <CodeBlock>{mermaidCode}</CodeBlock>
+        </Section>
+        <Section heading="Google sign-in flow">
+          <NumberedList
+            items={[
+              "PWA links to `pesenin.product.biz.id/api/v1/auth/google/start`; Go creates state, nonce and a PKCE verifier in a short-lived signed cookie.",
+              "Google redirects to the registered URI `https://pesenin.product.biz.id/api/v1/auth/google/callback` (plus `http://localhost:5173/api/v1/auth/google/callback` for development); Go exchanges the code with x/oauth2 and verifies the ID token with go-oidc (issuer, audience, nonce, email_verified).",
+              "Upsert user by Google sub. From the seller entry (`/app`) the first sign-in creates the account, the Koin wallet and the 5.000-koin promo_free_credit in one transaction; from a customer entry it creates only the customer profile.",
+              "Create a session row and set `pn_session` as HttpOnly, Secure, SameSite=Lax, Path=/, host-only (no Domain attribute, so it is never shared with other product.biz.id subdomains), 30 days sliding.",
+              "Redirect to `pesenin.product.biz.id/app/onboarding` or the dashboard.",
+              "Google consent screen: app name Pesenin, authorised domain product.biz.id, privacy policy and terms at `pesenin.product.biz.id/privasi` and `/syarat`.",
+            ]}
+          />
+        </Section>
+        <Section heading="Repository layout">
+          <CodeBlock>{`pesenin/
+  api/                 Go module
+    cmd/server/        main.go (HTTP + worker)
+    internal/http/     chi routes, middleware (auth, tenancy, ratelimit)
+    internal/domain/   orders, batches, wallet, uniqueamount
+    internal/db/       sqlc generated code
+    db/migrations/     golang-migrate SQL
+    db/queries/        sqlc .sql files
+  web/                 SvelteKit app
+    src/routes/(public)/[brand]/...   SSR public pages
+    src/routes/app/...                seller PWA
+    src/lib/i18n/                     Paraglide messages (id, en)
+  docker-compose.yml   Postgres + MinIO for local dev`}</CodeBlock>
+        </Section>
+      </Section>
+
+      <Section heading="24. Hosting and monthly cost" id="cost">
+        <Table columns={["Item", "MVP", "About 2.000 sellers", "Note"]} rows={costRows} />
+        <Text>Infrastructure stays under 15% of the Rp 20 million target. These are estimates from typical published pricing.</Text>
+      </Section>
+
+      <Section heading="25. Non-functional requirements" id="nfr">
+        <BulletList
+          items={[
+            "Performance: public order page under 100 KB of JavaScript, interactive in under 3 seconds on a low-end Android over 3G; API p95 under 300 ms.",
+            "PWA: installable, offline app shell, last-loaded order list readable offline; actions need a connection and say so.",
+            "Language: Bahasa Indonesia first with friendly, informal copy; English toggle; WIB, WITA and WIT time zones stored in UTC and shown per brand.",
+            "Formats: Rupiah as Rp 45.023; dates as Sabtu, 14 Nov; phone input accepts 08, 62 and +62.",
+            "Accessibility: tap targets at least 44 px, readable at 360 px width, sufficient contrast.",
+            "Security: HTTPS only, HttpOnly cookies, CSRF protection, rate limits on public endpoints, presigned uploads limited to images under 5 MB, server re-checks MIME, EXIF stripped, unguessable order tokens, bank details visible only to the brand.",
+            "Images: browser compresses proofs to WebP or JPEG, max 1280 px, target under 300 KB, before upload.",
+            "Privacy (UU PDP No. 27/2022): privacy policy and terms, consent line on the order form, data minimisation (name, WhatsApp, optional address), sellers act as controllers and Pesenin as processor, delete-my-data requests within 14 days, proofs deleted after 90 days.",
+            "Compliance basics: NIB through OSS and PSE registration with Komdigi before public launch; no payment licence needed because we never hold customer money.",
+            "Reliability: daily automated Postgres backups with 7-day retention; 99.5% uptime target; worker is idempotent if it restarts.",
+            "Auditability: every money movement and order status change written to audit_logs.",
+          ]}
+        />
+      </Section>
+
+      <Section heading="26. Scope by phase" id="scope">
+        <Table columns={["Phase", "Includes"]} rows={phaseScopeRows} />
+      </Section>
+
+      <Section heading="27. Release plan (Phase 1, 10 weeks)" id="release">
+        <Table columns={["Week", "Milestone", "Deliverables", "Owner"]} rows={p1ReleaseRows} />
+        <Text>Phase 1 is cut to the core loop so two people can reach a real beta in 10 weeks; anything not listed waits for Phase 2 and is reprioritised from beta feedback. Weeks 6 and 7 cross Christmas and New Year, so keep a buffer. Assumes about 15 to 20 hours a week each. A natural split is the friend on the Go API and you on design, SvelteKit screens and QA, meeting on the API contract in weeks 1 and 2.</Text>
+      </Section>
+
+      <Section heading="28. Risks and open questions" id="risks">
+        <Section heading="Risks and mitigations">
+          <Table
+            columns={["Risk", "Mitigation"]}
+            rows={[
+              ["Google blocks sign-in inside in-app browsers (Instagram, WhatsApp)", "Detect the webview and show Open in Chrome; add email magic link in phase 2"],
+              ["Customers transfer a rounded amount", "Search by approximate amount and name; reminder copy stresses the last 3 digits"],
+              ["Fake transfer screenshots", "Seller still checks the bank app; amount matching makes fakes easy to spot; bank mutation check in phase 2"],
+              ["Free alternatives (Google Forms, Tokko Free)", "Win on time saved: recap, matching, reminders; 50 free orders to prove it"],
+              ["Manual top-up verification becomes a bottleneck", "Verification SLA and queue badge; nudge larger top-ups with the low-balance banner; move to bank mutation checking or a gateway or QRIS channel once volume grows"],
+              ["Admin fee feels unfair on small top-ups", "Show it clearly before payment; keep it fixed and small, or waive it on manual transfer at launch by setting it to Rp 0"],
+              ["Scope creep from jastip and cafes", "Hold phase gates; MVP data model already supports Stores and free-text items later"],
+              ["Copycats", "Speed, community with sellers, customer history that sellers will not want to lose"],
+              ["Store shows the wrong open status because the seller forgets", "Hours drive the status by default; reminder after closing time; show the time of the last manual change"],
+              ["Live location exposes a seller's routine (phase 2)", "Share only while live, approximate mode, auto-stop, no history, consent screen"],
+              ["Browsers stop location in the background (phase 2)", "Tell the seller to keep Pesenin open; auto-stop instead of showing a stale pin"],
+              ["iPhone users cannot get push in a Safari tab", "Install prompt with steps; in-app center and WhatsApp links as fallback; measure opt-in by platform"],
+              ["Too many notifications make users switch them off", "Batching, quiet hours, rate limits, marketing off by default, per-event toggles"],
+              ["Scope creep delays Phase 1", "Phase 1 list is frozen; every new idea goes to the P2 backlog and is ranked by beta feedback at the exit review"],
+              ["Beta sellers are too busy in Ramadan and Lebaran PO season", "Onboard by mid-January, concierge setup, hands-on support in the seller WhatsApp community"],
+              ["Fake or retaliatory reviews (P2)", "Verified paid and completed orders only, self-review flag, rate limits, report queue, seller reply"],
+              ["Few reviews make grades noisy or unfair (P2)", "Hide grade below 5 reviews, show count, recency weighting in P3"],
+              ["Referral or achievement koin gets farmed (P2)", "Rewards only after 20 real paid orders, bank and phone checks, monthly caps, admin queue"],
+              ["Gamification feels childish or close to gambling", "Light in P2, no chance-based rewards, sellers can hide badges, reduced motion"],
+              ["Trust grade feels unfair or defamatory", "Neutral Baru level, private flag only, two-seller confirmation, reason codes, customer transparency and appeals, PDP-compliant terms"],
+              ["Shared or recycled phone numbers mix histories", "Only paid orders count, Google link when signed in, OTP verification in P3, 12-month retention"],
+              ["Discover turns Pesenin into a marketplace too early", "Kept in phase 2; MVP growth comes from seller links and QR codes"],
+              ["Printed QR codes break after a slug rename", "90-day redirect, rename warning with QR count, stable /q/ links in phase 2"],
+              ["pesenin.product.biz.id depends on whoever controls product.biz.id (DNS, SSL, email records, renewal)", "Get written agreement on DNS access and renewal; keep all links behind one config value; register a dedicated domain such as pesenin.id before public launch for brand trust and smoother Google OAuth verification, then 301-redirect the old URLs"],
+            ]}
+          />
+        </Section>
+        <Section heading="Open questions">
+          <NumberedList
+            items={[
+              "Name decided: Pesenin. When do we register a dedicated domain such as pesenin.id, and who controls product.biz.id DNS until then?",
+              "Is a grace floor of -5.000 koin right, or should it scale with past volume?",
+              "What is the launch admin fee for manual transfer: Rp 0, a small fixed fee such as Rp 1.000 to 2.500, or a percentage?",
+              "Should the unique code the seller pays be credited as koin (current spec) or absorbed into the admin fee?",
+              "Is Rp 1.000.000 the right custom maximum per top-up?",
+              "Should extra charges, delivery fees and runner fees count toward the Rp 100 charge base? Current answer: no, flat 100 koin per paid order.",
+              "Should percentage charges round to the nearest Rp 100 to keep totals tidy, or stay exact to the rupiah?",
+              "Is 10 active extra charges per brand the right limit?",
+              "Extra slot prices: is 25.000 koin per brand and 10.000 koin per store right, and one-time (recommended) or monthly?",
+              "Is a 90-day redirect and reservation enough after a slug rename, or should redirects last as long as nobody claims the slug?",
+              "Should two campaigns ever stack, or always one per order (current spec)?",
+              "Is 30 minutes the right Segera tutup threshold, and should Terima pre-order saat tutup default to on?",
+              "Should customer WhatsApp numbers be verified by OTP later, so history can follow the number across devices?",
+              "Mobile stores (phase 2): exact or approximate pin by default, and should going live cost koin?",
+              "Phase 1: what is the one fixed admin fee, and do founding beta sellers get an extra 10.000 koin?",
+              "Gamification (P2): are the six badges, their koin rewards (500 to 2.000) and the 10.000 koin monthly cap right?",
+              "Seller referral (P2): is 5.000 koin each after 20 paid orders the right reward?",
+              "Pesenin grade name and icon: Mangkok (bowl) or Sendok (spoon), and are Oke, Enak, Wajib coba the right labels?",
+              "Should there be a private Ada masalah? channel for bad experiences instead of only a public low rating?",
+              "Are 5 reviews enough to show a grade, and 14 days the right review window?",
+              "Trust grade: are 3 and 10 completed orders the right thresholds for Terpercaya and Langganan Setia, and should DP rules wait for the DP payment feature?",
+              "Brand: final Pesenin orange hex value, and is the animated logo built in Lottie or SVG with CSS?",
+              "Are default quiet hours of 22:00 to 06:00 right for sellers who bake at night, or should new-order pushes ignore quiet hours?",
+              "Do sellers want customers to see remaining quota, or only Habis?",
+              "Which bank account do we use for top-ups, and who verifies them on weekends?",
+              "Business entity for NIB and PSE: individual (perorangan) or PT perorangan?",
+              "Do we need deposit (DP) payments for large catering POs in MVP, or phase 2?",
+            ]}
+          />
+        </Section>
+      </Section>
+    </Page>
+  );
+}
+
+
+</cursor_untrusted_data_1337>

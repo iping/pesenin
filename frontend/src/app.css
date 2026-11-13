@@ -1,0 +1,103 @@
+@import 'tailwindcss';
+
+@theme {
+	--color-o: #f7861e;
+	--color-od: #e06f0a;
+	--color-o2: #ffe6cc;
+	--color-o3: #fff1e2;
+	--color-ink: #4a2a1a;
+	--color-ink2: #8c6b5a;
+	--color-ink3: #b9a194;
+	--color-mint: #6cc69a;
+	--color-mintd: #3fa673;
+	--color-mint2: #e3f6ec;
+	--color-cream: #fff6ea;
+	--color-line: #f1e4d6;
+	--color-gold: #f5b700;
+	--color-danger: #e5533d;
+	--font-display: 'Fredoka', sans-serif;
+	--font-sans: 'Nunito', sans-serif;
+}
+
+html,
+body {
+	background: #fff6ea;
+	color: #4a2a1a;
+	font-family: 'Nunito', sans-serif;
+	min-height: 100%;
+}
+
+h1,
+h2,
+h3,
+.fd {
+	font-family: 'Fredoka', sans-serif;
+	font-weight: 600;
+}
+
+button,
+input,
+textarea,
+select {
+	font: inherit;
+}
+
+.card {
+	background: white;
+	border-radius: 20px;
+	box-shadow: 0 2px 0 #f1e4d6, 0 6px 18px rgba(74, 42, 26, 0.06);
+}
+
+.btn {
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	gap: 8px;
+	height: 50px;
+	border-radius: 16px;
+	font-family: 'Fredoka', sans-serif;
+	font-weight: 600;
+	font-size: 16px;
+	border: none;
+	color: white;
+	background: #f7861e;
+	box-shadow: 0 4px 0 #e06f0a;
+	cursor: pointer;
+}
+.btn:disabled {
+	opacity: 0.55;
+	cursor: not-allowed;
+}
+.btn.mint {
+	background: #6cc69a;
+	box-shadow: 0 4px 0 #3fa673;
+}
+.btn.wa {
+	background: #25d366;
+	box-shadow: 0 4px 0 #18a84f;
+}
+.btn.ghost {
+	background: white;
+	color: #4a2a1a;
+	box-shadow: 0 3px 0 #f1e4d6;
+	border: 1.5px solid #f1e4d6;
+}
+.btn.sm {
+	height: 36px;
+	border-radius: 12px;
+	font-size: 14px;
+	padding: 0 14px;
+	box-shadow: 0 3px 0 #e06f0a;
+}
+.btn.sm.mint {
+	box-shadow: 0 3px 0 #3fa673;
+}
+.btn.sm.ghost {
+	box-shadow: 0 2px 0 #f1e4d6;
+}
+
+@media (prefers-reduced-motion: reduce) {
+	.motion {
+		display: none !important;
+	}
+}
