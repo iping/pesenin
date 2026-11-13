@@ -3,6 +3,7 @@
 	import { browser } from '$app/environment';
 	import { lang, copy } from '$lib/i18n';
 	import { rp, countdown, syncClock, when } from '$lib/format';
+	import MenuWeek from '$lib/components/MenuWeek.svelte';
 
 	let { shop, origin }: { shop: any; origin: string } = $props();
 	let c = $derived(copy($lang));
@@ -90,6 +91,8 @@
 			<p class="mt-2 rounded-xl bg-o3 px-3 py-2 text-xs font-bold text-od">{c.closedNote}</p>
 		{/if}
 
+		<MenuWeek {shop} poCount={count} />
+
 		{#if batch}
 			<div class="card mt-2.5 border-2 border-o2 p-3.5">
 				<div class="flex items-start gap-2">
@@ -147,7 +150,7 @@
 					</div>
 				{/each}
 			</div>
-		{:else}
+		{:else if !shop.menu?.enabled}
 			<div class="card mt-4 p-6 text-center">
 				<img src="/brand/placeholder-1x1.png" alt="" class="mx-auto h-24 w-24 rounded-2xl" />
 				<p class="mt-3 font-extrabold">{c.emptyOrders}</p>

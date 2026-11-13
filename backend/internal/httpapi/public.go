@@ -100,15 +100,21 @@ func (s *Server) writePublic(w http.ResponseWriter, r *http.Request, slug, store
 			photos[p.ID.String()] = *p.PhotoUrl
 		}
 	}
+	menu, err := s.App.PublicMenu(r.Context(), store, "")
+	if err != nil {
+		writeErr(w, err)
+		return
+	}
 	writeJSON(w, 200, map[string]any{
 		"brand": map[string]any{
 			"name": brand.Name, "slug": brand.Slug, "description": brand.Description,
 			"waNumber": brand.WaNumber, "logoUrl": brand.LogoUrl,
 		},
-		"store":    storeJSON(store),
-		"batches":  open,
-		"charges":  chs,
-		"photos":   photos,
+		"store":     storeJSON(store),
+		"batches":   open,
+		"charges":   chs,
+		"photos":    photos,
+		"menu":      menu,
 		"ordering":  store.IsOpen || store.AcceptPreordersWhenClosed,
 		"serverNow": time.Now().UTC().Format(time.RFC3339),
 	})
@@ -134,6 +140,10 @@ func (s *Server) publicBatch(w http.ResponseWriter, r *http.Request) {
 	b, err := s.App.Q.GetBatchByCode(r.Context(), chi.URLParam(r, "code"))
 	if err != nil {
 		writeErr(w, err)
+		return
+	}
+	if ch, err := s.App.Q.BatchChannel(r.Context(), b.ID); err == nil && ch == "menu" {
+		writeErr(w, service.E(404, "not_found", "PO tidak ketemu."))
 		return
 	}
 	items, err := s.App.Q.ListBatchItems(r.Context(), b.ID)

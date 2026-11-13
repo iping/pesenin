@@ -453,6 +453,9 @@ func (a *App) CreateBatch(ctx context.Context, userID, brandID uuid.UUID, in Bat
 }
 
 func (a *App) UpdateBatch(ctx context.Context, userID, batchID uuid.UUID, in BatchIn) (db.PoBatch, error) {
+	if err := a.ensureNotMenuAnchor(ctx, batchID); err != nil {
+		return db.PoBatch{}, err
+	}
 	cur, err := a.Q.GetBatch(ctx, batchID)
 	if err != nil {
 		return db.PoBatch{}, err
@@ -503,6 +506,9 @@ func (a *App) UpdateBatch(ctx context.Context, userID, batchID uuid.UUID, in Bat
 }
 
 func (a *App) SetBatchOpen(ctx context.Context, userID, batchID uuid.UUID, open bool) (db.PoBatch, error) {
+	if err := a.ensureNotMenuAnchor(ctx, batchID); err != nil {
+		return db.PoBatch{}, err
+	}
 	cur, err := a.Q.GetBatch(ctx, batchID)
 	if err != nil {
 		return db.PoBatch{}, err
@@ -528,6 +534,9 @@ func (a *App) SetBatchOpen(ctx context.Context, userID, batchID uuid.UUID, open 
 }
 
 func (a *App) DuplicateBatch(ctx context.Context, userID, batchID uuid.UUID) (db.PoBatch, error) {
+	if err := a.ensureNotMenuAnchor(ctx, batchID); err != nil {
+		return db.PoBatch{}, err
+	}
 	cur, err := a.Q.GetBatch(ctx, batchID)
 	if err != nil {
 		return db.PoBatch{}, err

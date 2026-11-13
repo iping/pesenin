@@ -114,7 +114,7 @@
 					<span class="grid h-6 w-6 place-items-center rounded-full text-white {on ? 'bg-mint' : 'border-2 border-[#E6DCD2] bg-white'}"></span>
 					<div>
 						<b class="fd {on ? '' : 'text-ink3'}">{label}</b>
-						{#if i === 4}<div class="text-[11px] font-bold text-ink2">{order.pickupSlotLabel || when(order.batch.readyAt, tz)} · {order.store.address}</div>{/if}
+						{#if i === 4}<div class="text-[11px] font-bold text-ink2">{order.menuDate ? order.batch.title : order.pickupSlotLabel || when(order.batch.readyAt, tz)} · {order.store.address}</div>{/if}
 					</div>
 				</div>
 			{/each}

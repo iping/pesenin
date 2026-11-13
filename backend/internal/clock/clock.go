@@ -31,9 +31,17 @@ func Zone(tz string) string {
 	}
 }
 
+// Load returns the IANA zone. An empty name is Asia/Jakarta.
+func Load(tz string) (*time.Location, error) {
+	if tz == "" {
+		tz = "Asia/Jakarta"
+	}
+	return time.LoadLocation(tz)
+}
+
 func loc(tz string) *time.Location {
-	l, err := time.LoadLocation(tz)
-	if err != nil || tz == "" {
+	l, err := Load(tz)
+	if err != nil {
 		l, _ = time.LoadLocation("Asia/Jakarta")
 	}
 	return l

@@ -1,0 +1,10 @@
+DROP INDEX IF EXISTS ux_po_batches_menu_anchor;
+ALTER TABLE po_batches DROP COLUMN IF EXISTS channel;
+DROP TABLE IF EXISTS menu_order_lines;
+DROP TABLE IF EXISTS menu_order_days;
+DROP TABLE IF EXISTS product_nutrition;
+DROP TABLE IF EXISTS store_menu_items;
+DROP TABLE IF EXISTS store_menu_days;
+DROP TABLE IF EXISTS store_menu_settings;
+DROP TABLE IF EXISTS menu_template_items;
+DROP TABLE IF EXISTS menu_templates;

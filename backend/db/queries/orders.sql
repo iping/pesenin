@@ -32,10 +32,10 @@ SELECT * FROM po_batches WHERE id = $1 FOR UPDATE;
 SELECT * FROM po_batches WHERE code = $1;
 
 -- name: ListBatchesByBrand :many
-SELECT * FROM po_batches WHERE brand_id = $1 ORDER BY created_at DESC;
+SELECT * FROM po_batches WHERE brand_id = $1 AND channel = 'po' ORDER BY created_at DESC;
 
 -- name: ListOpenBatchesByBrand :many
-SELECT * FROM po_batches WHERE brand_id = $1 AND status = 'open' ORDER BY closes_at;
+SELECT * FROM po_batches WHERE brand_id = $1 AND status = 'open' AND channel = 'po' ORDER BY closes_at;
 
 -- name: SetBatchStatus :one
 UPDATE po_batches
@@ -45,10 +45,10 @@ WHERE id = $1
 RETURNING *;
 
 -- name: ListDueBatchOpens :many
-SELECT * FROM po_batches WHERE status = 'scheduled' AND opens_at <= now();
+SELECT * FROM po_batches WHERE status = 'scheduled' AND opens_at <= now() AND channel = 'po';
 
 -- name: ListDueBatchCloses :many
-SELECT * FROM po_batches WHERE status = 'open' AND closes_at <= now();
+SELECT * FROM po_batches WHERE status = 'open' AND closes_at <= now() AND channel = 'po';
 
 -- name: InsertBatchItem :one
 INSERT INTO batch_items (

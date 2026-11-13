@@ -45,6 +45,16 @@ type App struct {
 	Push *push.Sender
 
 	tickMu sync.Mutex
+
+	// Now overrides the clock for daily-menu cutoff checks. Nil means time.Now.
+	Now func() time.Time
+}
+
+func (a *App) now() time.Time {
+	if a.Now != nil {
+		return a.Now()
+	}
+	return time.Now()
 }
 
 func New(pool *pgxpool.Pool, cfg config.Config, blob storage.ObjectStore, sender *push.Sender) *App {

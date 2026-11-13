@@ -202,11 +202,17 @@ func (s *Server) listProducts(w http.ResponseWriter, r *http.Request) {
 	for _, v := range vars {
 		by[v.ProductID] = append(by[v.ProductID], v)
 	}
+	nuts, _ := s.App.Q.ListNutritionByBrand(r.Context(), id)
+	nutBy := map[uuid.UUID]db.NutritionRow{}
+	for _, n := range nuts {
+		nutBy[n.ProductID] = n
+	}
 	out := []any{}
 	for _, p := range rows {
 		out = append(out, map[string]any{
 			"id": p.ID, "name": p.Name, "description": p.Description, "price": p.BasePrice,
 			"photoUrl": p.PhotoUrl, "active": p.Active, "variants": by[p.ID],
+			"nutrition": nutritionJSON(nutBy[p.ID]),
 		})
 	}
 	writeJSON(w, 200, out)
@@ -545,20 +551,20 @@ func (s *Server) patchBatch(w http.ResponseWriter, r *http.Request) {
 
 func readBatch(r *http.Request) (service.BatchIn, error) {
 	var raw struct {
-		StoreID       uuid.UUID `json:"storeId"`
-		Title         string    `json:"title"`
+		StoreID           uuid.UUID      `json:"storeId"`
+		Title             string         `json:"title"`
 		OpensAt           time.Time      `json:"opensAt"`
 		ClosesAt          time.Time      `json:"closesAt"`
 		ReadyAt           time.Time      `json:"readyAt"`
 		PickupSlots       []service.Slot `json:"pickupSlots"`
 		DeadlineMins      *int32         `json:"paymentDeadlineMins"`
 		PaymentDeadlineAt *time.Time     `json:"paymentDeadlineAt"`
-		QuotaTotal    *int32    `json:"quotaTotal"`
-		AllowPickup   bool      `json:"allowPickup"`
-		AllowDelivery bool      `json:"allowDelivery"`
-		Notes         string    `json:"notes"`
-		Publish       bool      `json:"publish"`
-		Items         []struct {
+		QuotaTotal        *int32         `json:"quotaTotal"`
+		AllowPickup       bool           `json:"allowPickup"`
+		AllowDelivery     bool           `json:"allowDelivery"`
+		Notes             string         `json:"notes"`
+		Publish           bool           `json:"publish"`
+		Items             []struct {
 			ProductID uuid.UUID  `json:"productId"`
 			VariantID *uuid.UUID `json:"variantId"`
 			Price     int64      `json:"price"`

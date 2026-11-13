@@ -15,6 +15,7 @@ import (
 	"github.com/jackc/pgx/v5/pgtype"
 
 	"pesenin.product.biz.id/api/internal/db"
+	"pesenin.product.biz.id/api/internal/menucal"
 	"pesenin.product.biz.id/api/internal/orderflow"
 	"pesenin.product.biz.id/api/internal/text"
 	"pesenin.product.biz.id/api/internal/uniqueamount"
@@ -46,6 +47,8 @@ type OrderDetail struct {
 	Batch    db.PoBatch
 	Store    db.Store
 	Brand    db.Brand
+	MenuDate *time.Time
+	MenuSlot string
 }
 
 type Quote struct {
@@ -149,6 +152,9 @@ func (a *App) PlaceOrder(ctx context.Context, code string, in PlaceOrder) (db.Or
 		return db.Order{}, E(404, "not_found", "PO tidak ketemu.")
 	}
 	if err != nil {
+		return db.Order{}, err
+	}
+	if err := a.ensureNotMenuAnchor(ctx, batch.ID); err != nil {
 		return db.Order{}, err
 	}
 	settings, err := a.LoadSettings(ctx)
@@ -516,7 +522,20 @@ func (a *App) hydrate(ctx context.Context, o db.Order) (OrderDetail, error) {
 	if err != nil {
 		return OrderDetail{}, err
 	}
-	return OrderDetail{Order: o, Items: items, Charges: charges, Customer: cust, Bank: bank, Proofs: proofs, Batch: batch, Store: store, Brand: brand}, nil
+	detail := OrderDetail{Order: o, Items: items, Charges: charges, Customer: cust, Bank: bank, Proofs: proofs, Batch: batch, Store: store, Brand: brand}
+	ref, err := a.Q.GetMenuOrderRef(ctx, o.ID)
+	if err != nil && !errors.Is(err, pgx.ErrNoRows) {
+		return OrderDetail{}, err
+	}
+	if err == nil {
+		d, err := menucal.ParseDate(ref.ServiceDate)
+		if err != nil {
+			return OrderDetail{}, err
+		}
+		detail.MenuDate = &d
+		detail.MenuSlot = ref.MealSlot
+	}
+	return detail, nil
 }
 
 func (a *App) SaveProof(ctx context.Context, token string, r io.Reader, mime string, size int) error {
@@ -743,7 +762,7 @@ func releaseItems(ctx context.Context, q *db.Queries, orderID uuid.UUID) error {
 			return err
 		}
 	}
-	return nil
+	return q.ReleaseMenuSold(ctx, orderID)
 }
 
 func (a *App) SetFulfilment(ctx context.Context, actor, orderID uuid.UUID, to string) (db.Order, error) {
