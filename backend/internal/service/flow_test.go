@@ -422,7 +422,9 @@ func reset(t *testing.T) {
 	}
 	defer conn.Close(ctx)
 	_, err = conn.Exec(ctx, `
-		TRUNCATE audit_logs, notifications, push_subscriptions, message_templates,
+		TRUNCATE capacity_incidents, order_refund_flags, customer_notices, po_waitlist,
+			pickup_capacities, batch_item_limits, batch_capacities, product_capacity_rules, po_capacity_rules,
+			audit_logs, notifications, push_subscriptions, message_templates,
 			payment_proofs, order_charges, order_items, orders, customers,
 			batch_items, po_batches, extra_charges, product_variants, products,
 			bank_accounts, stores, brands, wallet_transactions, wallets,

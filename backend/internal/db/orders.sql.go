@@ -1031,8 +1031,9 @@ func (q *Queries) ListDueBatchOpens(ctx context.Context) ([]PoBatch, error) {
 }
 
 const listDueOrders = `-- name: ListDueOrders :many
+-- Only orders that still have no transfer proof. Uploading proof keeps the capacity reservation.
 SELECT id, batch_id, brand_id, store_id, customer_id, code, public_token, idempotency_key, subtotal, extra_charges_total, base_total, unique_suffix, total_due, bank_account_id, payment_status, fulfilment_status, fulfilment_method, address, note, expires_at, paid_at, charged_at, cancelled_at, created_at, pickup_slot_start, pickup_slot_end FROM orders
-WHERE payment_status IN ('pending', 'proof_submitted')
+WHERE payment_status = 'pending'
   AND expires_at IS NOT NULL
   AND expires_at <= now()
 LIMIT 100

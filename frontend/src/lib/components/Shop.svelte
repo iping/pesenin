@@ -3,6 +3,7 @@
 	import { browser } from '$app/environment';
 	import { lang, copy } from '$lib/i18n';
 	import { rp, countdown, syncClock, when } from '$lib/format';
+	import { api, ApiError } from '$lib/api';
 
 	let { shop, origin }: { shop: any; origin: string } = $props();
 	let c = $derived(copy($lang));
@@ -37,8 +38,49 @@
 	let sub = $derived(lines.reduce((s: number, it: any) => s + it.qty * it.price, 0));
 	let sold = $derived((batch?.items || []).reduce((s: number, it: any) => s + (it.sold || 0), 0));
 	let quota = $derived(batch?.quotaTotal || 0);
+	let sisa = $derived(quota ? Math.max(0, quota - sold) : null);
 	let pct = $derived(quota ? Math.min(100, Math.round((sold / quota) * 100)) : 0);
 	let clock = $derived(batch ? countdown(batch.closesAt) + (tick ? '' : '') : '');
+	let cap = $derived(batch?.capacity);
+	let wlName = $state('');
+	let wlWa = $state('');
+	let wlMsg = $state('');
+	let wlErr = $state('');
+	let wlToken = $state('');
+	let showWait = $derived(
+		!!cap?.waitlistEnabled &&
+			(batch?.status !== 'open' || sisa === 0 || cap?.remainingQty === 0 || cap?.remainingOrders === 0 || (batch?.items || []).some((it: any) => it.remaining === 0))
+	);
+
+	$effect(() => {
+		if (!browser || !batch?.code) return;
+		const saved = sessionStorage.getItem('wait:' + batch.code) || '';
+		if (saved) wlToken = saved;
+	});
+
+	$effect(() => {
+		if (!browser || !wlToken) return;
+		const token = wlToken;
+		const pull = () => api<any>('/api/v1/public/waitlist/' + token).then((row) => (wlMsg = row.message || '')).catch(() => {});
+		pull();
+		const id = setInterval(pull, 15000);
+		return () => clearInterval(id);
+	});
+
+	async function joinWait() {
+		wlErr = '';
+		try {
+			const row = await api<any>('/api/v1/public/batches/' + batch.code + '/waitlist', {
+				method: 'POST',
+				body: JSON.stringify({ name: wlName, whatsapp: wlWa, qty: 1, slotIndex: 0 })
+			});
+			sessionStorage.setItem('wait:' + batch.code, row.token);
+			wlToken = row.token;
+			wlMsg = row.message;
+		} catch (e) {
+			wlErr = e instanceof ApiError ? e.message : 'Gagal masuk daftar tunggu.';
+		}
+	}
 
 	function checkout() {
 		if (!batch || count === 0) return;
@@ -105,8 +147,21 @@
 				{#if quota}
 					<div class="mt-2 flex items-center gap-2">
 						<div class="h-2.5 flex-1 overflow-hidden rounded-full bg-[#F3E6D8]"><div class="h-full rounded-full bg-gradient-to-r from-o to-[#FFB04D]" style="width:{pct}%"></div></div>
-						<span class="text-[11px] font-extrabold text-od">{sold}/{quota} pcs</span>
+						<span class="text-[11px] font-extrabold text-od">Sisa {sisa}</span>
 					</div>
+				{/if}
+				{#if cap?.remainingOrders != null}
+					<p class="mt-1 text-[11px] font-extrabold text-od">Sisa {cap.remainingOrders} pesanan</p>
+				{/if}
+				{#if cap?.minQty || cap?.minAmountRp || cap?.maxQtyPerCustomer}
+					<p class="mt-1 text-[11px] font-bold text-ink2">
+						{#if cap.minQty}Min {cap.minQty} pcs{/if}
+						{#if cap.minAmountRp} · Min Rp {rp(cap.minAmountRp)}{/if}
+						{#if cap.maxQtyPerCustomer} · Maks {cap.maxQtyPerCustomer} pcs/orang{/if}
+					</p>
+				{/if}
+				{#if cap?.cutoffLeadMinutes}
+					<p class="text-[11px] font-bold text-ink2">Pesan paling lambat {cap.cutoffLeadMinutes} menit sebelum ambil.</p>
 				{/if}
 				<div class="mt-2 flex flex-wrap gap-1.5">
 					{#if batch.allowPickup}<span class="rounded-full border border-line bg-white px-2.5 py-1 text-xs font-bold">{c.pickup}</span>{/if}
@@ -130,8 +185,14 @@
 							{#if it.description}<div class="line-clamp-2 text-[11px] font-bold text-ink2">{it.description}</div>{/if}
 							<div class="mt-1 flex items-center gap-2">
 								<b class="fd text-[15px]">Rp {rp(it.price)}</b>
-								{#if left != null && left <= 5}<span class="text-[11px] font-extrabold text-danger">Sisa {left}</span>{/if}
+								{#if left != null}<span class="text-[11px] font-extrabold {left <= 5 ? 'text-danger' : 'text-od'}">Sisa {left}</span>{/if}
 							</div>
+							{#if it.minQty || it.maxPerCustomer}
+								<div class="text-[11px] font-bold text-ink2">
+									{#if it.minQty}Min {it.minQty}{/if}
+									{#if it.maxPerCustomer}{#if it.minQty} · {/if}Maks {it.maxPerCustomer}{/if}
+								</div>
+							{/if}
 						</div>
 						{#if left === 0}
 							<span class="text-xs font-extrabold text-ink3">Habis</span>
@@ -147,6 +208,17 @@
 					</div>
 				{/each}
 			</div>
+			{#if showWait}
+				<div class="card mt-3 p-3.5">
+					<div class="fd text-sm">Mau dikabari kalau ada slot?</div>
+					<p class="mt-1 text-[11px] font-bold text-ink2">Masuk daftar tunggu. Kami kabari di halaman ini.</p>
+					{#if wlMsg}<p class="mt-2 rounded-xl bg-mint2 px-3 py-2 text-xs font-extrabold text-mintd">{wlMsg}</p>{/if}
+					<input class="mt-2 h-11 w-full rounded-xl border border-line px-3" placeholder="Nama" bind:value={wlName} />
+					<input class="mt-2 h-11 w-full rounded-xl border border-line px-3" placeholder="08…" bind:value={wlWa} inputmode="tel" />
+					{#if wlErr}<p class="mt-2 text-xs font-extrabold text-danger">{wlErr}</p>{/if}
+					<button class="btn mt-2 w-full" disabled={!wlName || !wlWa} onclick={joinWait}>Masuk daftar tunggu</button>
+				</div>
+			{/if}
 		{:else}
 			<div class="card mt-4 p-6 text-center">
 				<img src="/brand/placeholder-1x1.png" alt="" class="mx-auto h-24 w-24 rounded-2xl" />

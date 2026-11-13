@@ -1,0 +1,9 @@
+DROP TABLE IF EXISTS capacity_incidents;
+DROP TABLE IF EXISTS order_refund_flags;
+DROP TABLE IF EXISTS customer_notices;
+DROP TABLE IF EXISTS po_waitlist;
+DROP TABLE IF EXISTS pickup_capacities;
+DROP TABLE IF EXISTS batch_item_limits;
+DROP TABLE IF EXISTS product_capacity_rules;
+DROP TABLE IF EXISTS batch_capacities;
+DROP TABLE IF EXISTS po_capacity_rules;

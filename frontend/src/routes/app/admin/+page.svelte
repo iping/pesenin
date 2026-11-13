@@ -9,6 +9,7 @@
 	let fees = $state<any>(null);
 	let settings = $state<any>(null);
 	let report = $state<any>(null);
+	let capacity = $state<any[]>([]);
 	let fixed = $state(1000);
 	let note = $state('Biaya admin manual transfer');
 	let reason = $state('');
@@ -19,6 +20,7 @@
 		fees = await api('/api/v1/admin/fee-configs');
 		settings = await api('/api/v1/admin/settings');
 		report = await api('/api/v1/admin/reports/koin');
+		capacity = (await api<any>('/api/v1/admin/capacity')).stores || [];
 		fixed = fees.active.FixedRp ?? 1000;
 	}
 	onMount(load);
@@ -62,6 +64,18 @@
 		{#if fees}
 			<div class="mt-2 text-[11px] font-bold text-ink2">Aktif Rp {rp(fees.active.FixedRp)}</div>
 		{/if}
+	</div>
+	<div class="card p-3">
+		<div class="fd">Kapasitas per toko</div>
+		<p class="text-xs font-bold text-ink2">Percobaan yang tertahan biar tidak oversell, dan pesanan yang dibatalkan karena kuota minimum.</p>
+		{#each capacity as row}
+			<div class="mt-2 border-t border-dashed border-line pt-2 text-sm font-bold">
+				<div>{row.brandName} · {row.storeName}</div>
+				<div class="text-[11px] text-ink2">Tertahan {row.oversellBlocked} · batal {row.cancellations} · oversell sekarang {row.oversoldNow}</div>
+			</div>
+		{:else}
+			<p class="mt-2 text-xs font-bold text-ink2">Belum ada toko.</p>
+		{/each}
 	</div>
 	{#each queue as t}
 		<div class="card p-3">

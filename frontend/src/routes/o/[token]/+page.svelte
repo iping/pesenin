@@ -97,6 +97,12 @@
 <div class="mx-auto min-h-screen max-w-[430px] bg-cream px-4 pb-28 pt-4">
 	<h1 class="text-xl">{paid && order.paymentStatus === 'paid' ? c.statusTitle : c.payTitle}</h1>
 	<p class="text-[11px] font-extrabold text-ink2">{order.code} · {order.brand.name}</p>
+	{#if order.refundDue}
+		<p class="mt-3 rounded-xl bg-o3 px-3 py-2 text-sm font-extrabold text-od">Pembayaran ditandai untuk dikembalikan. Penjual akan transfer balik.</p>
+	{/if}
+	{#each order.notices || [] as note}
+		<p class="mt-2 rounded-xl bg-[#FFF8DB] px-3 py-2 text-sm font-extrabold text-[#8A6A00]"><b>{note.title}.</b> {note.body}</p>
+	{/each}
 
 	{#if order.paymentStatus === 'paid'}
 		<div class="card relative mt-3 overflow-hidden bg-gradient-to-b from-o3 to-white p-4">

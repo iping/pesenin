@@ -479,7 +479,7 @@ func (s *Server) listBatches(w http.ResponseWriter, r *http.Request) {
 	out := []any{}
 	for _, b := range rows {
 		items, _ := s.App.Q.ListBatchItems(r.Context(), b.ID)
-		out = append(out, batchJSON(b, items, ""))
+		out = append(out, s.presentBatch(r.Context(), b, items, ""))
 	}
 	writeJSON(w, 200, out)
 }
@@ -501,7 +501,7 @@ func (s *Server) createBatch(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	items, _ := s.App.Q.ListBatchItems(r.Context(), b.ID)
-	writeJSON(w, 201, batchJSON(b, items, ""))
+	writeJSON(w, 201, s.presentBatch(r.Context(), b, items, ""))
 }
 
 func (s *Server) getBatch(w http.ResponseWriter, r *http.Request) {
@@ -520,7 +520,7 @@ func (s *Server) getBatch(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	items, _ := s.App.Q.ListBatchItems(r.Context(), b.ID)
-	writeJSON(w, 200, batchJSON(b, items, ""))
+	writeJSON(w, 200, s.presentBatch(r.Context(), b, items, ""))
 }
 
 func (s *Server) patchBatch(w http.ResponseWriter, r *http.Request) {
@@ -540,29 +540,39 @@ func (s *Server) patchBatch(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	items, _ := s.App.Q.ListBatchItems(r.Context(), b.ID)
-	writeJSON(w, 200, batchJSON(b, items, ""))
+	writeJSON(w, 200, s.presentBatch(r.Context(), b, items, ""))
 }
 
 func readBatch(r *http.Request) (service.BatchIn, error) {
 	var raw struct {
-		StoreID       uuid.UUID `json:"storeId"`
-		Title         string    `json:"title"`
+		StoreID           uuid.UUID      `json:"storeId"`
+		Title             string         `json:"title"`
 		OpensAt           time.Time      `json:"opensAt"`
 		ClosesAt          time.Time      `json:"closesAt"`
 		ReadyAt           time.Time      `json:"readyAt"`
 		PickupSlots       []service.Slot `json:"pickupSlots"`
 		DeadlineMins      *int32         `json:"paymentDeadlineMins"`
 		PaymentDeadlineAt *time.Time     `json:"paymentDeadlineAt"`
-		QuotaTotal    *int32    `json:"quotaTotal"`
-		AllowPickup   bool      `json:"allowPickup"`
-		AllowDelivery bool      `json:"allowDelivery"`
-		Notes         string    `json:"notes"`
-		Publish       bool      `json:"publish"`
-		Items         []struct {
-			ProductID uuid.UUID  `json:"productId"`
-			VariantID *uuid.UUID `json:"variantId"`
-			Price     int64      `json:"price"`
-			Quota     *int32     `json:"quota"`
+		QuotaTotal        *int32         `json:"quotaTotal"`
+		AllowPickup       bool           `json:"allowPickup"`
+		AllowDelivery     bool           `json:"allowDelivery"`
+		Notes             string         `json:"notes"`
+		Publish           bool           `json:"publish"`
+		RulesSet          bool           `json:"rulesSet"`
+		MinQty            *int32         `json:"minQty"`
+		MinAmountRp       *int64         `json:"minAmountRp"`
+		MaxQtyPerCustomer *int32         `json:"maxQtyPerCustomer"`
+		CapacityOrders    *int32         `json:"capacityOrders"`
+		MinProceedQty     *int32         `json:"minProceedQty"`
+		CutoffLeadMinutes *int32         `json:"cutoffLeadMinutes"`
+		WaitlistEnabled   *bool          `json:"waitlistEnabled"`
+		Items             []struct {
+			ProductID      uuid.UUID  `json:"productId"`
+			VariantID      *uuid.UUID `json:"variantId"`
+			Price          int64      `json:"price"`
+			Quota          *int32     `json:"quota"`
+			MinQty         *int32     `json:"minQty"`
+			MaxPerCustomer *int32     `json:"maxPerCustomer"`
 		} `json:"items"`
 	}
 	if err := readJSON(r, &raw); err != nil {
@@ -572,10 +582,16 @@ func readBatch(r *http.Request) (service.BatchIn, error) {
 		StoreID: raw.StoreID, Title: raw.Title, OpensAt: raw.OpensAt, ClosesAt: raw.ClosesAt,
 		ReadyAt: raw.ReadyAt, PickupSlots: raw.PickupSlots,
 		DeadlineMins: raw.DeadlineMins, PaymentDeadlineAt: raw.PaymentDeadlineAt, QuotaTotal: raw.QuotaTotal, AllowPickup: raw.AllowPickup,
-		AllowDelivery: raw.AllowDelivery, Notes: raw.Notes, Publish: raw.Publish,
+		AllowDelivery: raw.AllowDelivery, Notes: raw.Notes, Publish: raw.Publish, RulesSet: raw.RulesSet,
+		MinQty: raw.MinQty, MinAmountRp: raw.MinAmountRp, MaxQtyPerCustomer: raw.MaxQtyPerCustomer,
+		CapacityOrders: raw.CapacityOrders, MinProceedQty: raw.MinProceedQty, CutoffLeadMinutes: raw.CutoffLeadMinutes,
+		WaitlistEnabled: raw.WaitlistEnabled,
 	}
 	for _, it := range raw.Items {
-		in.Items = append(in.Items, service.BatchItemIn{ProductID: it.ProductID, VariantID: it.VariantID, Price: it.Price, Quota: it.Quota})
+		in.Items = append(in.Items, service.BatchItemIn{
+			ProductID: it.ProductID, VariantID: it.VariantID, Price: it.Price, Quota: it.Quota,
+			MinQty: it.MinQty, MaxPerCustomer: it.MaxPerCustomer,
+		})
 	}
 	return in, nil
 }
@@ -598,7 +614,7 @@ func (s *Server) flipBatch(w http.ResponseWriter, r *http.Request, open bool) {
 		return
 	}
 	items, _ := s.App.Q.ListBatchItems(r.Context(), b.ID)
-	writeJSON(w, 200, batchJSON(b, items, ""))
+	writeJSON(w, 200, s.presentBatch(r.Context(), b, items, ""))
 }
 
 func (s *Server) duplicateBatch(w http.ResponseWriter, r *http.Request) {
@@ -613,7 +629,7 @@ func (s *Server) duplicateBatch(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	items, _ := s.App.Q.ListBatchItems(r.Context(), b.ID)
-	writeJSON(w, 201, batchJSON(b, items, ""))
+	writeJSON(w, 201, s.presentBatch(r.Context(), b, items, ""))
 }
 
 func (s *Server) recap(w http.ResponseWriter, r *http.Request) {
@@ -683,7 +699,7 @@ func (s *Server) dashboard(w http.ResponseWriter, r *http.Request) {
 	for _, b := range batches {
 		if b.Status == "open" {
 			items, _ := s.App.Q.ListBatchItems(r.Context(), b.ID)
-			open = batchJSON(b, items, "")
+			open = s.presentBatch(r.Context(), b, items, "")
 			break
 		}
 	}

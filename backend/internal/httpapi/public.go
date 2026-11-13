@@ -105,10 +105,10 @@ func (s *Server) writePublic(w http.ResponseWriter, r *http.Request, slug, store
 			"name": brand.Name, "slug": brand.Slug, "description": brand.Description,
 			"waNumber": brand.WaNumber, "logoUrl": brand.LogoUrl,
 		},
-		"store":    storeJSON(store),
-		"batches":  open,
-		"charges":  chs,
-		"photos":   photos,
+		"store":     storeJSON(store),
+		"batches":   open,
+		"charges":   chs,
+		"photos":    photos,
 		"ordering":  store.IsOpen || store.AcceptPreordersWhenClosed,
 		"serverNow": time.Now().UTC().Format(time.RFC3339),
 	})
@@ -127,6 +127,7 @@ func (s *Server) batchWithPhotos(r *http.Request, b db.PoBatch, items []db.Batch
 		list[i] = m
 	}
 	view["items"] = list
+	s.attachCapacity(r.Context(), view)
 	return view
 }
 
@@ -160,14 +161,16 @@ func (s *Server) publicBatch(w http.ResponseWriter, r *http.Request) {
 
 func (s *Server) quoteOrder(w http.ResponseWriter, r *http.Request) {
 	var body struct {
-		Method string             `json:"method"`
-		Items  []service.CartItem `json:"items"`
+		Method    string             `json:"method"`
+		Items     []service.CartItem `json:"items"`
+		WhatsApp  string             `json:"whatsapp"`
+		SlotIndex int                `json:"slotIndex"`
 	}
 	if err := readJSON(r, &body); err != nil {
 		writeErr(w, err)
 		return
 	}
-	q, err := s.App.Quote(r.Context(), chi.URLParam(r, "code"), body.Method, body.Items)
+	q, err := s.App.Quote(r.Context(), chi.URLParam(r, "code"), body.Method, body.Items, body.WhatsApp, body.SlotIndex)
 	if err != nil {
 		writeErr(w, err)
 		return
@@ -176,7 +179,15 @@ func (s *Server) quoteOrder(w http.ResponseWriter, r *http.Request) {
 	for _, c := range q.Charges {
 		chs = append(chs, map[string]any{"name": c.Name, "amount": c.AmountRp})
 	}
-	writeJSON(w, 200, map[string]any{"subtotal": q.Subtotal, "charges": chs, "extra": q.Extra, "baseTotal": q.Base})
+	writeJSON(w, 200, map[string]any{
+		"subtotal": q.Subtotal, "charges": chs, "extra": q.Extra, "baseTotal": q.Base,
+		"problems": q.Problems,
+		"limits": map[string]any{
+			"minQty": q.Limits.MinQty, "minAmountRp": q.Limits.MinAmountRp,
+			"maxQtyPerCustomer": q.Limits.MaxQtyPerCustomer,
+			"remainingQty":      q.Limits.RemainingQty, "remainingOrders": q.Limits.RemainingOrders,
+		},
+	})
 }
 
 func (s *Server) placeOrder(w http.ResponseWriter, r *http.Request) {

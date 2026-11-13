@@ -50,7 +50,12 @@
 		if (!code || lines.length === 0) return;
 		quote = await api('/api/v1/public/batches/' + code + '/quote', {
 			method: 'POST',
-			body: JSON.stringify({ method, items: lines.map((it: any) => ({ batchItemId: it.id, qty: it.qty })) })
+			body: JSON.stringify({
+				method,
+				whatsapp: wa,
+				slotIndex,
+				items: lines.map((it: any) => ({ batchItemId: it.id, qty: it.qty }))
+			})
 		});
 	}
 
@@ -138,7 +143,12 @@
 				{#if (batch.pickupSlots || []).length}
 					<div class="mt-2 space-y-1">
 						{#each batch.pickupSlots as s, i}
-							<button type="button" class="block w-full rounded-xl border px-3 py-2 text-left text-xs font-extrabold {slotIndex === i ? 'border-o bg-o3 text-od' : 'border-line'}" onclick={() => (slotIndex = i)}>{s.label || when(s.start, tz)}</button>
+							{@const full = s.remainingQty === 0 || s.remainingOrders === 0}
+							<button type="button" disabled={full} class="block w-full rounded-xl border px-3 py-2 text-left text-xs font-extrabold {slotIndex === i ? 'border-o bg-o3 text-od' : 'border-line'} {full ? 'opacity-50' : ''}" onclick={() => (slotIndex = i)}>
+								{s.label || when(s.start, tz)}
+								{#if s.remainingQty != null} · Sisa {s.remainingQty}{/if}
+								{#if full} · Penuh{/if}
+							</button>
 						{/each}
 					</div>
 				{/if}
@@ -164,6 +174,18 @@
 					<div class="flex py-1"><span class="flex-1 text-ink2">{ch.name}</span><span>Rp {rp(ch.amount)}</span></div>
 				{/each}
 			</div>
+			{#if batch.capacity?.minQty || batch.capacity?.minAmountRp || batch.capacity?.maxQtyPerCustomer || batch.capacity?.remainingQty != null}
+				<p class="rounded-xl bg-o3 px-3 py-2 text-xs font-extrabold text-od">
+					{#if batch.capacity.remainingQty != null}Sisa {batch.capacity.remainingQty} pcs. {/if}
+					{#if batch.capacity.remainingOrders != null}Sisa {batch.capacity.remainingOrders} pesanan. {/if}
+					{#if batch.capacity.minQty}Min {batch.capacity.minQty} pcs. {/if}
+					{#if batch.capacity.minAmountRp}Min Rp {rp(batch.capacity.minAmountRp)}. {/if}
+					{#if batch.capacity.maxQtyPerCustomer}Maks {batch.capacity.maxQtyPerCustomer} pcs per orang.{/if}
+				</p>
+			{/if}
+			{#each quote?.problems || [] as problem}
+				<p class="rounded-xl bg-red-50 px-3 py-2 text-sm font-extrabold text-danger">{problem}</p>
+			{/each}
 			{#if err}<p class="rounded-xl bg-red-50 px-3 py-2 text-sm font-extrabold text-danger">{err}</p>{/if}
 		</div>
 	{/if}
@@ -175,5 +197,5 @@
 		<b class="fd text-[22px] leading-none">Rp {rp(quote?.baseTotal || 0)}</b>
 		<div class="text-[10px] font-extrabold text-ink3">{c.uniqueLater}</div>
 	</div>
-	<button class="btn w-[180px]" disabled={busy || !name || !wa} onclick={submit}>{c.orderNow}</button>
+	<button class="btn w-[180px]" disabled={busy || !name || !wa || (quote?.problems || []).length > 0} onclick={submit}>{c.orderNow}</button>
 </div>

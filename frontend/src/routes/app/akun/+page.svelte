@@ -101,6 +101,7 @@
 			<input type="checkbox" checked={brand.stores[0].acceptPreordersWhenClosed} onchange={(e) => preorder((e.target as HTMLInputElement).checked)} />
 			{c.preorderOk}
 		</label>
+		<a class="block text-sm font-extrabold text-od" href="/app/kapasitas">Aturan kapasitas PO</a>
 		<a class="text-sm font-extrabold text-od" href="/app/pelanggan">{c.customers}</a>
 
 		<div class="card p-3">

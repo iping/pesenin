@@ -5,6 +5,7 @@ sql:
     schema:
       - internal/migrate/migrations/000001_init.up.sql
       - internal/migrate/migrations/000002_periods.up.sql
+      - internal/migrate/migrations/000010_po_capacity.up.sql
     gen:
       go:
         package: db

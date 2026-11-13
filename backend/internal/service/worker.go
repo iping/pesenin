@@ -5,6 +5,8 @@ import (
 	"log/slog"
 	"time"
 
+	"github.com/jackc/pgx/v5"
+
 	"pesenin.product.biz.id/api/internal/db"
 	"pesenin.product.biz.id/api/internal/orderflow"
 )
@@ -28,6 +30,7 @@ func (a *App) Tick(ctx context.Context) {
 	defer a.tickMu.Unlock()
 	a.openDue(ctx)
 	a.closeDue(ctx)
+	a.reviewMinimums(ctx)
 	a.expireOrders(ctx)
 	a.expireTopups(ctx)
 	a.flushPushes(ctx)
@@ -67,23 +70,30 @@ func (a *App) expireOrders(ctx context.Context) {
 		return
 	}
 	for _, row := range rows {
-		err := a.tx(ctx, func(q *db.Queries) error {
+		var notified int
+		var brand, batchID = row.BrandID, row.BatchID
+		err := a.txConn(ctx, func(q *db.Queries, tx pgx.Tx) error {
 			o, err := q.GetOrderForUpdate(ctx, row.ID)
 			if err != nil {
 				return err
 			}
-			if !orderflow.CanExpire(o.PaymentStatus) {
+			// Proof already uploaded keeps the reservation. Only a still-pending transfer expires.
+			if o.PaymentStatus != "pending" || !orderflow.CanExpire(o.PaymentStatus) {
 				return nil
 			}
-			if err := releaseItems(ctx, q, o.ID); err != nil {
+			notified, err = releaseOrderHold(ctx, q, tx, o)
+			if err != nil {
 				return err
 			}
+			brand, batchID = o.BrandID, o.BatchID
 			_, err = q.SetOrderPayment(ctx, db.SetOrderPaymentParams{ID: o.ID, PaymentStatus: "expired"})
 			return err
 		})
 		if err != nil {
 			slog.Error("expire order", "err", err, "id", row.ID)
+			continue
 		}
+		a.pingWaitlist(ctx, brand, batchID, notified)
 	}
 }
 
