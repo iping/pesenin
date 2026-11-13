@@ -21,6 +21,7 @@ func (a *App) SeedDemo(ctx context.Context) error {
 		}
 		slog.Info("seeded platform admin", "email", a.Cfg.AdminEmail)
 	}
+	_, _ = a.Pool.Exec(ctx, `UPDATE users SET email_verified_at = COALESCE(email_verified_at, now()) WHERE email = $1`, a.Cfg.AdminEmail)
 	const sellerEmail = "rini@dapur.test"
 	user, err := a.Q.GetUserByEmail(ctx, sellerEmail)
 	if err != nil {
@@ -41,7 +42,7 @@ func (a *App) SeedDemo(ctx context.Context) error {
 		return err
 	}
 	if len(brands) > 0 {
-		return nil
+		return a.markDemoVerified(ctx, user.ID, brands[0].ID, "+6281234560001")
 	}
 	brand, _, err := a.CreateBrand(ctx, user.ID, NewBrand{
 		Name: "Dapur Senja", Slug: "dapur-senja",
@@ -117,10 +118,33 @@ func (a *App) SeedDemo(ctx context.Context) error {
 		return err
 	}
 	slog.Info("seeded demo seller", "email", sellerEmail, "slug", "dapur-senja")
-	return nil
+	return a.markDemoVerified(ctx, user.ID, brand.ID, "+6281234560001")
 }
 
 func int32ptr(n int32) *int32 { return &n }
+
+func (a *App) markDemoVerified(ctx context.Context, userID, brandID uuid.UUID, phone string) error {
+	_, err := a.Pool.Exec(ctx, `
+		UPDATE users
+		SET email_verified_at = COALESCE(email_verified_at, now()),
+		    whatsapp_e164 = COALESCE(whatsapp_e164, $2),
+		    whatsapp_verified_at = COALESCE(whatsapp_verified_at, now())
+		WHERE id = $1`, userID, phone)
+	if err != nil {
+		return err
+	}
+	tag, err := a.Pool.Exec(ctx, `
+		UPDATE brands
+		SET kyc_status = 'verified', kyc_reason = '', kyc_updated_at = now()
+		WHERE id = $1 AND kyc_status = 'unverified'`, brandID)
+	if err != nil || tag.RowsAffected() == 0 {
+		return err
+	}
+	_, err = a.Pool.Exec(ctx, `
+		INSERT INTO brand_kyc_events (brand_id, from_status, to_status, reason)
+		VALUES ($1, 'unverified', 'verified', 'Demo seed')`, brandID)
+	return err
+}
 
 // silence unused in case seed imports shift
 var _ = uuid.Nil

@@ -21,12 +21,17 @@ func tsP(t pgtype.Timestamptz) any {
 }
 
 func meJSON(me service.Me) map[string]any {
+	kycBy := map[uuid.UUID]service.BrandKYCView{}
+	for _, k := range me.KYC {
+		kycBy[k.ID] = k
+	}
 	out := map[string]any{
 		"user": map[string]any{
 			"id": me.User.ID, "email": me.User.Email, "name": me.User.Name,
 			"avatarUrl": me.User.AvatarUrl, "isPlatformAdmin": me.User.IsPlatformAdmin,
 		},
-		"softLocked": me.Locked, "lowBalance": me.Low, "graceFloor": me.Floor, "orderFee": me.Fee,
+		"verification": verificationJSON(me),
+		"softLocked":   me.Locked, "lowBalance": me.Low, "graceFloor": me.Floor, "orderFee": me.Fee,
 	}
 	if me.Account != nil {
 		out["account"] = map[string]any{"id": me.Account.ID, "name": me.Account.Name, "status": me.Account.Status}
@@ -53,17 +58,39 @@ func meJSON(me service.Me) map[string]any {
 		brands = append(brands, map[string]any{
 			"id": b.ID, "name": b.Name, "slug": b.Slug, "description": b.Description,
 			"waNumber": b.WaNumber, "logoUrl": b.LogoUrl, "stores": stores,
+			"kycStatus": kycBy[b.ID].Status, "kycReason": kycBy[b.ID].Reason,
 		})
 	}
 	out["brands"] = brands
 	return out
 }
 
+func verificationJSON(me service.Me) map[string]any {
+	brands := []any{}
+	for _, k := range me.KYC {
+		brands = append(brands, map[string]any{
+			"id": k.ID, "name": k.Name, "slug": k.Slug,
+			"status": k.Status, "reason": k.Reason,
+		})
+	}
+	if brands == nil {
+		brands = []any{}
+	}
+	return map[string]any{
+		"emailVerified":    me.Contact.EmailVerified,
+		"whatsapp":         me.Contact.Whatsapp,
+		"whatsappVerified": me.Contact.WhatsappVerified,
+		"hasPassword":      me.Contact.HasPassword,
+		"kycGate":          me.Contact.Gate,
+		"brands":           brands,
+	}
+}
+
 func storeJSON(st db.Store) map[string]any {
 	return map[string]any{
 		"id": st.ID, "name": st.Name, "slug": st.Slug, "address": st.Address, "mapsUrl": st.MapsUrl,
 		"timezone": st.Timezone,
-		"isOpen": st.IsOpen, "acceptPreordersWhenClosed": st.AcceptPreordersWhenClosed, "isDefault": st.IsDefault,
+		"isOpen":   st.IsOpen, "acceptPreordersWhenClosed": st.AcceptPreordersWhenClosed, "isDefault": st.IsDefault,
 	}
 }
 
@@ -90,7 +117,7 @@ func batchJSON(b db.PoBatch, items []db.BatchItem, tz string) map[string]any {
 	return map[string]any{
 		"id": b.ID, "code": b.Code, "title": b.Title, "status": b.Status,
 		"opensAt": ts(b.OpensAt), "closesAt": ts(b.ClosesAt), "readyAt": ts(b.ReadyAt),
-		"pickupSlots": slotJSON(b.PickupSlots, tz),
+		"pickupSlots":       slotJSON(b.PickupSlots, tz),
 		"paymentDeadlineAt": tsP(b.PaymentDeadlineAt), "paymentDeadlineMins": b.PaymentDeadlineMins, "quotaTotal": b.QuotaTotal,
 		"allowPickup": b.AllowPickup, "allowDelivery": b.AllowDelivery, "notes": b.Notes,
 		"timezone": tz, "serverNow": time.Now().UTC().Format(time.RFC3339),
@@ -143,7 +170,7 @@ func orderJSON(d service.OrderDetail) map[string]any {
 		"expiresAt": tsP(d.Order.ExpiresAt), "paidAt": tsP(d.Order.PaidAt), "createdAt": ts(d.Order.CreatedAt),
 		"pickupSlotStart": tsP(d.Order.PickupSlotStart), "pickupSlotEnd": tsP(d.Order.PickupSlotEnd),
 		"serverNow": time.Now().UTC().Format(time.RFC3339),
-		"items": items, "charges": charges, "latestRejectReason": reject, "proofs": proofs,
+		"items":     items, "charges": charges, "latestRejectReason": reject, "proofs": proofs,
 		"customer": map[string]any{"id": d.Customer.ID, "name": d.Customer.Name, "wa": d.Customer.WaNumberE164, "ordersCount": d.Customer.OrdersCount},
 		"bank":     map[string]any{"bankCode": d.Bank.BankCode, "accountNumber": d.Bank.AccountNumber, "holderName": d.Bank.HolderName},
 		"batch": map[string]any{
@@ -152,8 +179,8 @@ func orderJSON(d service.OrderDetail) map[string]any {
 			"pickupSlots": slotJSON(d.Batch.PickupSlots, d.Store.Timezone),
 		},
 		"pickupSlotLabel": pickupLabel(d),
-		"store": map[string]any{"name": d.Store.Name, "address": d.Store.Address, "isOpen": d.Store.IsOpen, "timezone": d.Store.Timezone},
-		"brand":    map[string]any{"name": d.Brand.Name, "slug": d.Brand.Slug, "waNumber": d.Brand.WaNumber},
+		"store":           map[string]any{"name": d.Store.Name, "address": d.Store.Address, "isOpen": d.Store.IsOpen, "timezone": d.Store.Timezone},
+		"brand":           map[string]any{"name": d.Brand.Name, "slug": d.Brand.Slug, "waNumber": d.Brand.WaNumber},
 	}
 }
 

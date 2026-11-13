@@ -33,6 +33,17 @@ services:
       VAPID_PUBLIC_KEY: ${VAPID_PUBLIC_KEY:-}
       VAPID_PRIVATE_KEY: ${VAPID_PRIVATE_KEY:-}
       VAPID_SUBJECT: ${VAPID_SUBJECT:-mailto:noreply@pesenin.product.biz.id}
+      MAIL_DRIVER: ${MAIL_DRIVER:-}
+      SMTP_HOST: ${SMTP_HOST:-}
+      SMTP_PORT: ${SMTP_PORT:-587}
+      SMTP_USERNAME: ${SMTP_USERNAME:-}
+      SMTP_PASSWORD: ${SMTP_PASSWORD:-}
+      SMTP_FROM: "${SMTP_FROM:-Pesenin <noreply@pesenin.product.biz.id>}"
+      WA_PROVIDER: ${WA_PROVIDER:-log}
+      WA_API_URL: ${WA_API_URL:-}
+      WA_API_TOKEN: ${WA_API_TOKEN:-}
+      WA_SENDER_ID: ${WA_SENDER_ID:-}
+      KYC_GATE: ${KYC_GATE:-contact}
       R2_ENDPOINT: ${R2_ENDPOINT:-}
       R2_BUCKET: ${R2_BUCKET:-}
       R2_ACCESS_KEY_ID: ${R2_ACCESS_KEY_ID:-}

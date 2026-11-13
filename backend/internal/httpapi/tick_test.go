@@ -5,6 +5,7 @@ import (
 	"net/http/httptest"
 	"testing"
 
+	"pesenin.product.biz.id/api/internal/db"
 	"pesenin.product.biz.id/api/internal/service"
 )
 
@@ -26,5 +27,24 @@ func TestTickRequiresCronSecret(t *testing.T) {
 	s.Router().ServeHTTP(rr, req)
 	if rr.Code != http.StatusUnauthorized {
 		t.Fatalf("bad bearer status = %d", rr.Code)
+	}
+}
+
+func TestAdminPasswordSessionBlocked(t *testing.T) {
+	admin := db.User{IsPlatformAdmin: true}
+	if err := service.AdminSessionAllowed(admin, "google"); err != nil {
+		t.Fatal(err)
+	}
+	if err := service.AdminSessionAllowed(admin, "dev"); err != nil {
+		t.Fatal(err)
+	}
+	if err := service.AdminSessionAllowed(admin, ""); err != nil {
+		t.Fatal(err)
+	}
+	if err := service.AdminSessionAllowed(admin, "password"); err == nil {
+		t.Fatal("password session must not open admin")
+	}
+	if err := service.AdminSessionAllowed(db.User{}, "google"); err == nil {
+		t.Fatal("non-admin")
 	}
 }

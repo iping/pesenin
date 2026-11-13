@@ -8,6 +8,7 @@ import (
 	"errors"
 	"fmt"
 	"log/slog"
+	"strings"
 	"sync"
 	"time"
 
@@ -17,10 +18,13 @@ import (
 	"github.com/jackc/pgx/v5/pgtype"
 	"github.com/jackc/pgx/v5/pgxpool"
 
+	"pesenin.product.biz.id/api/internal/authlimit"
 	"pesenin.product.biz.id/api/internal/config"
 	"pesenin.product.biz.id/api/internal/db"
+	"pesenin.product.biz.id/api/internal/mailer"
 	"pesenin.product.biz.id/api/internal/push"
 	"pesenin.product.biz.id/api/internal/storage"
+	"pesenin.product.biz.id/api/internal/wasender"
 )
 
 // Error is a client-facing failure with a stable code.
@@ -38,17 +42,49 @@ func E(status int, code, msg string) *Error {
 
 // App is the Phase 1 use-case layer. Handlers and tests both call it.
 type App struct {
-	Pool *pgxpool.Pool
-	Q    *db.Queries
-	Cfg  config.Config
-	Blob storage.ObjectStore
-	Push *push.Sender
+	Pool  *pgxpool.Pool
+	Q     *db.Queries
+	Cfg   config.Config
+	Blob  storage.ObjectStore
+	Push  *push.Sender
+	Mail  mailer.Sender
+	WA    wasender.Sender
+	Limit *authlimit.Limiter
 
+	limits *authQuota
 	tickMu sync.Mutex
 }
 
 func New(pool *pgxpool.Pool, cfg config.Config, blob storage.ObjectStore, sender *push.Sender) *App {
-	return &App{Pool: pool, Q: db.New(pool), Cfg: cfg, Blob: blob, Push: sender}
+	return &App{
+		Pool: pool, Q: db.New(pool), Cfg: cfg, Blob: blob, Push: sender,
+		Mail: mailerFrom(cfg), WA: waFrom(cfg), Limit: authlimit.New(),
+	}
+}
+
+func mailerFrom(cfg config.Config) mailer.Sender {
+	if cfg.MailLog() {
+		return mailer.Log{}
+	}
+	port := cfg.SMTPPort
+	if port == 0 {
+		port = 587
+	}
+	return mailer.SMTP{
+		Host: cfg.SMTPHost, Port: port, Username: cfg.SMTPUser,
+		Password: cfg.SMTPPassword, From: cfg.SMTPFrom,
+	}
+}
+
+func waFrom(cfg config.Config) wasender.Sender {
+	switch strings.ToLower(strings.TrimSpace(cfg.WAProvider)) {
+	case "", "log":
+		return wasender.Log{}
+	default:
+		return wasender.Provider{
+			Name: cfg.WAProvider, APIURL: cfg.WAAPIURL, Token: cfg.WAAPIToken, SenderID: cfg.WASenderID,
+		}
+	}
 }
 
 func (a *App) tx(ctx context.Context, fn func(q *db.Queries) error) error {

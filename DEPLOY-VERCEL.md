@@ -96,6 +96,17 @@ Mark secrets as Sensitive. There is no session-signing secret: a session is a ra
 | `R2_ACCESS_KEY_ID` | R2 access key. Sensitive. | with `STORAGE_DRIVER=s3` |
 | `R2_SECRET_ACCESS_KEY` | R2 secret. Sensitive. | with `STORAGE_DRIVER=s3` |
 | `SESSION_DAYS` | `30` | no |
+| `MAIL_DRIVER` | `log` or `smtp`. Empty uses SMTP when `SMTP_HOST` is set, otherwise the log driver. | no |
+| `SMTP_HOST` | SMTP relay hostname. Empty keeps the log driver, which prints the link. | for real email |
+| `SMTP_PORT` | `587` (STARTTLS) or `465` (implicit TLS). | with SMTP |
+| `SMTP_USERNAME` | SMTP username. | with SMTP auth |
+| `SMTP_PASSWORD` | SMTP password. Sensitive. | with SMTP auth |
+| `SMTP_FROM` | From header, for example `Pesenin <noreply@pesenin.product.biz.id>`. | with SMTP |
+| `WA_PROVIDER` | `log` (default), or a reserved name: `fonnte`, `wablas`, `meta`. Only `log` sends today; it prints the OTP. | no |
+| `WA_API_URL` | Provider base URL. Required by the stub before a provider is implemented. | with a provider |
+| `WA_API_TOKEN` | Provider token. Sensitive. | with a provider |
+| `WA_SENDER_ID` | Sender phone id, for Meta WhatsApp Cloud API later. | no |
+| `KYC_GATE` | `contact` (default) or `off`. `contact` blocks paid orders and koin top-up until the owner's email and WhatsApp are verified. | recommended |
 | `CRON_SECRET` | Long random string. Sensitive. See the worker note below. | only if you schedule `/api/v1/internal/tick` |
 | `API_INTERNAL_URL` | Leave unset. The service binding sets it. | no |
 | `HTTP_ADDR` | Leave unset. Compose sets `:8080`. | no |

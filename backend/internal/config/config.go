@@ -29,6 +29,17 @@ type Config struct {
 	VAPIDPrivate   string
 	VAPIDSubject   string
 	SessionTTL     time.Duration
+	MailDriver     string
+	SMTPHost       string
+	SMTPPort       int
+	SMTPUser       string
+	SMTPPassword   string
+	SMTPFrom       string
+	WAProvider     string
+	WAAPIURL       string
+	WAAPIToken     string
+	WASenderID     string
+	KYCGate        string
 }
 
 func Load() Config {
@@ -56,6 +67,17 @@ func Load() Config {
 		VAPIDPrivate:   os.Getenv("VAPID_PRIVATE_KEY"),
 		VAPIDSubject:   getenv("VAPID_SUBJECT", "mailto:noreply@pesenin.product.biz.id"),
 		SessionTTL:     time.Duration(getenvInt("SESSION_DAYS", 30)) * 24 * time.Hour,
+		MailDriver:     strings.ToLower(getenv("MAIL_DRIVER", "")),
+		SMTPHost:       os.Getenv("SMTP_HOST"),
+		SMTPPort:       getenvInt("SMTP_PORT", 587),
+		SMTPUser:       os.Getenv("SMTP_USERNAME"),
+		SMTPPassword:   os.Getenv("SMTP_PASSWORD"),
+		SMTPFrom:       getenv("SMTP_FROM", "Pesenin <noreply@pesenin.product.biz.id>"),
+		WAProvider:     strings.ToLower(getenv("WA_PROVIDER", "log")),
+		WAAPIURL:       os.Getenv("WA_API_URL"),
+		WAAPIToken:     os.Getenv("WA_API_TOKEN"),
+		WASenderID:     os.Getenv("WA_SENDER_ID"),
+		KYCGate:        strings.ToLower(getenv("KYC_GATE", "contact")),
 	}
 }
 
@@ -130,6 +152,25 @@ func (c Config) GoogleEnabled() bool {
 
 func (c Config) R2Enabled() bool {
 	return c.StorageDriver == "s3" && c.R2Endpoint != "" && c.R2Bucket != "" && c.R2AccessKey != "" && c.R2SecretKey != ""
+}
+
+// MailLog is the dev driver. SMTP is used when MAIL_DRIVER=smtp, or when
+// MAIL_DRIVER is empty and SMTP_HOST is set.
+func (c Config) MailLog() bool {
+	switch c.MailDriver {
+	case "log":
+		return true
+	case "smtp":
+		return false
+	default:
+		return strings.TrimSpace(c.SMTPHost) == ""
+	}
+}
+
+// KYCEnforced blocks paid orders and top-ups until contact is verified.
+// KYC_GATE=off turns the gate off. The default is contact.
+func (c Config) KYCEnforced() bool {
+	return !strings.EqualFold(strings.TrimSpace(c.KYCGate), "off")
 }
 
 func getenv(k, def string) string {

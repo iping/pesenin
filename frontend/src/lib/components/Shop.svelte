@@ -81,6 +81,9 @@
 						<span class="h-1.5 w-1.5 rounded-full bg-white"></span>
 						{shop.store.isOpen ? c.storeOpen : c.storeClosed}
 					</span>
+					{#if shop.brand.verified}
+						<span class="inline-flex items-center rounded-full bg-mint2 px-2.5 py-1 text-xs font-extrabold text-mintd">✓ {c.verifiedBadge}</span>
+					{/if}
 					{#if shop.store.address}<span class="truncate text-[11px] font-bold text-ink2">{shop.store.address}</span>{/if}
 				</div>
 			</div>

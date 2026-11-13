@@ -2,7 +2,9 @@
 
 PO-first order tool for Indonesian home food sellers. Tagline: **Hungry? Ping me**. Mascot: Pingping.
 
-Phase 1 (MVP v1) covers seller Google sign-in, one brand and one store, pre-order batches, guest checkout, unique transfer amounts, proof upload, production recap, a koin wallet with manual top-up, and a super-admin queue.
+Phase 1 (MVP v1) covers seller sign-in with Google or email and password, one brand and one store, pre-order batches, guest checkout, unique transfer amounts, proof upload, production recap, a koin wallet with manual top-up, and a super-admin queue.
+
+Sellers can also verify a WhatsApp number. Paid orders and koin top-up stay closed until the owner's email and WhatsApp are verified (`KYC_GATE=contact`). Office Pesenin can then approve, reject, or suspend a brand. Admin routes still require a Google session (or the local demo login), not a password session.
 
 Public pages, the seller app (`/app`), and the API (`/api`) share one origin.
 
@@ -27,6 +29,9 @@ Turn `DEV_LOGIN` off outside local development.
 | Variable | Purpose |
 | --- | --- |
 | `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET` | Seller Google sign-in. Callback: `{PUBLIC_ORIGIN}/api/v1/auth/google/callback` |
+| `MAIL_DRIVER`, `SMTP_HOST`, `SMTP_PORT`, `SMTP_USERNAME`, `SMTP_PASSWORD`, `SMTP_FROM` | Transactional email. Empty `SMTP_HOST` (or `MAIL_DRIVER=log`) prints confirmation and reset links in the API log. |
+| `WA_PROVIDER`, `WA_API_URL`, `WA_API_TOKEN`, `WA_SENDER_ID` | WhatsApp OTP. `log` prints the code. `fonnte`, `wablas`, and `meta` are reserved and not implemented yet. |
+| `KYC_GATE` | `contact` (default) blocks paid orders and koin top-up until email and WhatsApp are verified. `off` disables the gate. |
 | `VAPID_PUBLIC_KEY`, `VAPID_PRIVATE_KEY`, `VAPID_SUBJECT` | Web Push. If empty, the API writes a dev key pair into the upload volume. |
 | `R2_ENDPOINT`, `R2_BUCKET`, `R2_ACCESS_KEY_ID`, `R2_SECRET_ACCESS_KEY` | Cloudflare R2 for transfer proofs. Leave empty to store files on local disk. |
 | `ADMIN_EMAIL` | First sign-in of this address is the platform admin. |
