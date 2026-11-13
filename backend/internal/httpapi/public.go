@@ -11,6 +11,7 @@ import (
 	qrcode "github.com/skip2/go-qrcode"
 
 	"pesenin.product.biz.id/api/internal/db"
+	"pesenin.product.biz.id/api/internal/hours"
 	"pesenin.product.biz.id/api/internal/service"
 )
 
@@ -100,17 +101,37 @@ func (s *Server) writePublic(w http.ResponseWriter, r *http.Request, slug, store
 			photos[p.ID.String()] = *p.PhotoUrl
 		}
 	}
+	now := time.Now()
+	status, err := s.App.StoreStatus(r.Context(), store, now)
+	if err != nil {
+		writeErr(w, err)
+		return
+	}
+	var pickups []time.Time
+	for _, b := range batches {
+		if b.StoreID != store.ID {
+			continue
+		}
+		for _, sl := range service.ParseSlots(b.PickupSlots) {
+			pickups = append(pickups, sl.Start)
+		}
+	}
+	path := "/api/v1/public/brands/" + slug
+	if storeSlug != "" {
+		path += "/stores/" + storeSlug
+	}
 	writeJSON(w, 200, map[string]any{
 		"brand": map[string]any{
 			"name": brand.Name, "slug": brand.Slug, "description": brand.Description,
 			"waNumber": brand.WaNumber, "logoUrl": brand.LogoUrl,
 		},
-		"store":    storeJSON(store),
-		"batches":  open,
-		"charges":  chs,
-		"photos":   photos,
-		"ordering":  store.IsOpen || store.AcceptPreordersWhenClosed,
-		"serverNow": time.Now().UTC().Format(time.RFC3339),
+		"store":      storeJSON(store, status),
+		"batches":    open,
+		"charges":    chs,
+		"photos":     photos,
+		"ordering":   hours.Ordering(status.Open, store.AcceptPreordersWhenClosed, pickups, now, store.Timezone),
+		"statusPath": path,
+		"serverNow":  now.UTC().Format(time.RFC3339),
 	})
 }
 
@@ -142,19 +163,35 @@ func (s *Server) publicBatch(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	brand, _ := s.App.Q.GetBrandByID(r.Context(), b.BrandID)
-	store, _ := s.App.Q.GetStore(r.Context(), b.StoreID)
+	store, err := s.App.Q.GetStore(r.Context(), b.StoreID)
+	if err != nil {
+		writeErr(w, err)
+		return
+	}
 	charges, _ := s.App.Q.ListActiveCharges(r.Context(), b.BrandID)
 	chs := []any{}
 	for _, c := range charges {
 		chs = append(chs, map[string]any{"name": c.Name, "amount": c.AmountRp, "methods": c.FulfilmentMethods})
 	}
+	now := time.Now()
+	status, err := s.App.StoreStatus(r.Context(), store, now)
+	if err != nil {
+		writeErr(w, err)
+		return
+	}
+	var pickups []time.Time
+	for _, sl := range service.ParseSlots(b.PickupSlots) {
+		pickups = append(pickups, sl.Start)
+	}
+	ordering := b.Status == "open" && hours.Ordering(status.Open, store.AcceptPreordersWhenClosed, pickups, now, store.Timezone)
 	writeJSON(w, 200, map[string]any{
-		"batch":     s.batchWithPhotos(r, b, items, store.Timezone),
-		"brand":     map[string]any{"name": brand.Name, "slug": brand.Slug, "waNumber": brand.WaNumber, "description": brand.Description},
-		"store":     storeJSON(store),
-		"charges":   chs,
-		"ordering":  b.Status == "open" && (store.IsOpen || store.AcceptPreordersWhenClosed),
-		"serverNow": time.Now().UTC().Format(time.RFC3339),
+		"batch":      s.batchWithPhotos(r, b, items, store.Timezone),
+		"brand":      map[string]any{"name": brand.Name, "slug": brand.Slug, "waNumber": brand.WaNumber, "description": brand.Description},
+		"store":      storeJSON(store, status),
+		"charges":    chs,
+		"ordering":   ordering,
+		"statusPath": "/api/v1/public/batches/" + b.Code,
+		"serverNow":  now.UTC().Format(time.RFC3339),
 	})
 }
 

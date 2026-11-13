@@ -21,7 +21,7 @@ func (s *Server) wallet(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	writeJSON(w, 200, map[string]any{
-		"wallet": meJSON(me)["wallet"], "softLocked": me.Locked, "lowBalance": me.Low,
+		"wallet": meJSON(me, nil)["wallet"], "softLocked": me.Locked, "lowBalance": me.Low,
 		"graceFloor": me.Floor, "orderFee": me.Fee,
 	})
 }

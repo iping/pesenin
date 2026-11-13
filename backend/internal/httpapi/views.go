@@ -8,6 +8,7 @@ import (
 
 	"pesenin.product.biz.id/api/internal/clock"
 	"pesenin.product.biz.id/api/internal/db"
+	"pesenin.product.biz.id/api/internal/hours"
 	"pesenin.product.biz.id/api/internal/service"
 )
 
@@ -20,7 +21,7 @@ func tsP(t pgtype.Timestamptz) any {
 	return ts(t.Time)
 }
 
-func meJSON(me service.Me) map[string]any {
+func meJSON(me service.Me, byStore map[uuid.UUID]hours.Status) map[string]any {
 	out := map[string]any{
 		"user": map[string]any{
 			"id": me.User.ID, "email": me.User.Email, "name": me.User.Name,
@@ -48,7 +49,7 @@ func meJSON(me service.Me) map[string]any {
 	for _, b := range me.Brands {
 		stores := []any{}
 		for _, st := range me.Stores[b.ID] {
-			stores = append(stores, storeJSON(st))
+			stores = append(stores, storeJSON(st, byStore[st.ID]))
 		}
 		brands = append(brands, map[string]any{
 			"id": b.ID, "name": b.Name, "slug": b.Slug, "description": b.Description,
@@ -59,12 +60,16 @@ func meJSON(me service.Me) map[string]any {
 	return out
 }
 
-func storeJSON(st db.Store) map[string]any {
-	return map[string]any{
+func storeJSON(st db.Store, status hours.Status) map[string]any {
+	body := map[string]any{
 		"id": st.ID, "name": st.Name, "slug": st.Slug, "address": st.Address, "mapsUrl": st.MapsUrl,
 		"timezone": st.Timezone,
-		"isOpen": st.IsOpen, "acceptPreordersWhenClosed": st.AcceptPreordersWhenClosed, "isDefault": st.IsDefault,
+		"isOpen":   st.IsOpen, "acceptPreordersWhenClosed": st.AcceptPreordersWhenClosed, "isDefault": st.IsDefault,
 	}
+	if status.Timezone != "" || status.Source != "" {
+		body["hours"] = status
+	}
+	return body
 }
 
 func batchJSON(b db.PoBatch, items []db.BatchItem, tz string) map[string]any {
@@ -90,7 +95,7 @@ func batchJSON(b db.PoBatch, items []db.BatchItem, tz string) map[string]any {
 	return map[string]any{
 		"id": b.ID, "code": b.Code, "title": b.Title, "status": b.Status,
 		"opensAt": ts(b.OpensAt), "closesAt": ts(b.ClosesAt), "readyAt": ts(b.ReadyAt),
-		"pickupSlots": slotJSON(b.PickupSlots, tz),
+		"pickupSlots":       slotJSON(b.PickupSlots, tz),
 		"paymentDeadlineAt": tsP(b.PaymentDeadlineAt), "paymentDeadlineMins": b.PaymentDeadlineMins, "quotaTotal": b.QuotaTotal,
 		"allowPickup": b.AllowPickup, "allowDelivery": b.AllowDelivery, "notes": b.Notes,
 		"timezone": tz, "serverNow": time.Now().UTC().Format(time.RFC3339),
@@ -143,7 +148,7 @@ func orderJSON(d service.OrderDetail) map[string]any {
 		"expiresAt": tsP(d.Order.ExpiresAt), "paidAt": tsP(d.Order.PaidAt), "createdAt": ts(d.Order.CreatedAt),
 		"pickupSlotStart": tsP(d.Order.PickupSlotStart), "pickupSlotEnd": tsP(d.Order.PickupSlotEnd),
 		"serverNow": time.Now().UTC().Format(time.RFC3339),
-		"items": items, "charges": charges, "latestRejectReason": reject, "proofs": proofs,
+		"items":     items, "charges": charges, "latestRejectReason": reject, "proofs": proofs,
 		"customer": map[string]any{"id": d.Customer.ID, "name": d.Customer.Name, "wa": d.Customer.WaNumberE164, "ordersCount": d.Customer.OrdersCount},
 		"bank":     map[string]any{"bankCode": d.Bank.BankCode, "accountNumber": d.Bank.AccountNumber, "holderName": d.Bank.HolderName},
 		"batch": map[string]any{
@@ -152,8 +157,8 @@ func orderJSON(d service.OrderDetail) map[string]any {
 			"pickupSlots": slotJSON(d.Batch.PickupSlots, d.Store.Timezone),
 		},
 		"pickupSlotLabel": pickupLabel(d),
-		"store": map[string]any{"name": d.Store.Name, "address": d.Store.Address, "isOpen": d.Store.IsOpen, "timezone": d.Store.Timezone},
-		"brand":    map[string]any{"name": d.Brand.Name, "slug": d.Brand.Slug, "waNumber": d.Brand.WaNumber},
+		"store":           map[string]any{"name": d.Store.Name, "address": d.Store.Address, "isOpen": d.Store.IsOpen, "timezone": d.Store.Timezone},
+		"brand":           map[string]any{"name": d.Brand.Name, "slug": d.Brand.Slug, "waNumber": d.Brand.WaNumber},
 	}
 }
 

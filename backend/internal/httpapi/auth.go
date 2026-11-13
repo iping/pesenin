@@ -61,7 +61,12 @@ func (s *Server) devLogin(w http.ResponseWriter, r *http.Request) {
 		writeErr(w, err)
 		return
 	}
-	writeJSON(w, 200, meJSON(me))
+	payload, err := s.meBody(r.Context(), me)
+	if err != nil {
+		writeErr(w, err)
+		return
+	}
+	writeJSON(w, 200, payload)
 }
 
 func (s *Server) logout(w http.ResponseWriter, r *http.Request) {
