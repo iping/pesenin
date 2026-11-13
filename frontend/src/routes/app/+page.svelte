@@ -92,6 +92,14 @@
 			</div>
 		{/if}
 
+		<a href="/app/menu" class="card flex items-center gap-3 p-3">
+			<span class="grid h-11 w-11 place-items-center rounded-2xl bg-o text-xl text-white">☀</span>
+			<span>
+				<b class="fd block text-base">{c.menu}</b>
+				<span class="text-[11px] font-bold text-ink2">{c.menuLead}</span>
+			</span>
+		</a>
+
 		<div class="grid grid-cols-4 gap-2 text-center text-[11px] font-extrabold">
 			<a href="/app/po/baru" class="card grid place-items-center py-3 text-o">{c.makePo}</a>
 			<a href="/{brand.slug}" class="card grid place-items-center py-3 text-mintd">{c.share}</a>

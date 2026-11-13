@@ -8,6 +8,7 @@ import (
 
 	"pesenin.product.biz.id/api/internal/clock"
 	"pesenin.product.biz.id/api/internal/db"
+	"pesenin.product.biz.id/api/internal/menucal"
 	"pesenin.product.biz.id/api/internal/service"
 )
 
@@ -63,7 +64,7 @@ func storeJSON(st db.Store) map[string]any {
 	return map[string]any{
 		"id": st.ID, "name": st.Name, "slug": st.Slug, "address": st.Address, "mapsUrl": st.MapsUrl,
 		"timezone": st.Timezone,
-		"isOpen": st.IsOpen, "acceptPreordersWhenClosed": st.AcceptPreordersWhenClosed, "isDefault": st.IsDefault,
+		"isOpen":   st.IsOpen, "acceptPreordersWhenClosed": st.AcceptPreordersWhenClosed, "isDefault": st.IsDefault,
 	}
 }
 
@@ -90,7 +91,7 @@ func batchJSON(b db.PoBatch, items []db.BatchItem, tz string) map[string]any {
 	return map[string]any{
 		"id": b.ID, "code": b.Code, "title": b.Title, "status": b.Status,
 		"opensAt": ts(b.OpensAt), "closesAt": ts(b.ClosesAt), "readyAt": ts(b.ReadyAt),
-		"pickupSlots": slotJSON(b.PickupSlots, tz),
+		"pickupSlots":       slotJSON(b.PickupSlots, tz),
 		"paymentDeadlineAt": tsP(b.PaymentDeadlineAt), "paymentDeadlineMins": b.PaymentDeadlineMins, "quotaTotal": b.QuotaTotal,
 		"allowPickup": b.AllowPickup, "allowDelivery": b.AllowDelivery, "notes": b.Notes,
 		"timezone": tz, "serverNow": time.Now().UTC().Format(time.RFC3339),
@@ -143,18 +144,51 @@ func orderJSON(d service.OrderDetail) map[string]any {
 		"expiresAt": tsP(d.Order.ExpiresAt), "paidAt": tsP(d.Order.PaidAt), "createdAt": ts(d.Order.CreatedAt),
 		"pickupSlotStart": tsP(d.Order.PickupSlotStart), "pickupSlotEnd": tsP(d.Order.PickupSlotEnd),
 		"serverNow": time.Now().UTC().Format(time.RFC3339),
-		"items": items, "charges": charges, "latestRejectReason": reject, "proofs": proofs,
+		"items":     items, "charges": charges, "latestRejectReason": reject, "proofs": proofs,
 		"customer": map[string]any{"id": d.Customer.ID, "name": d.Customer.Name, "wa": d.Customer.WaNumberE164, "ordersCount": d.Customer.OrdersCount},
 		"bank":     map[string]any{"bankCode": d.Bank.BankCode, "accountNumber": d.Bank.AccountNumber, "holderName": d.Bank.HolderName},
 		"batch": map[string]any{
-			"id": d.Batch.ID, "code": d.Batch.Code, "title": d.Batch.Title,
+			"id": d.Batch.ID, "code": d.Batch.Code, "title": menuBatchTitle(d),
 			"readyAt": ts(d.Batch.ReadyAt), "closesAt": ts(d.Batch.ClosesAt),
 			"pickupSlots": slotJSON(d.Batch.PickupSlots, d.Store.Timezone),
 		},
+		"menuDate": menuDateJSON(d), "menuSlot": emptyAsNil(d.MenuSlot), "menuSlotLabel": menuSlotLabel(d),
 		"pickupSlotLabel": pickupLabel(d),
-		"store": map[string]any{"name": d.Store.Name, "address": d.Store.Address, "isOpen": d.Store.IsOpen, "timezone": d.Store.Timezone},
-		"brand":    map[string]any{"name": d.Brand.Name, "slug": d.Brand.Slug, "waNumber": d.Brand.WaNumber},
+		"store":           map[string]any{"name": d.Store.Name, "address": d.Store.Address, "isOpen": d.Store.IsOpen, "timezone": d.Store.Timezone},
+		"brand":           map[string]any{"name": d.Brand.Name, "slug": d.Brand.Slug, "waNumber": d.Brand.WaNumber},
 	}
+}
+
+func menuBatchTitle(d service.OrderDetail) string {
+	if d.MenuDate == nil {
+		return d.Batch.Title
+	}
+	title := "Menu " + menucal.DayLabel(*d.MenuDate)
+	if d.MenuSlot != "" {
+		title += " · " + menucal.SlotLabel(d.MenuSlot)
+	}
+	return title
+}
+
+func menuDateJSON(d service.OrderDetail) any {
+	if d.MenuDate == nil {
+		return nil
+	}
+	return menucal.DateString(*d.MenuDate)
+}
+
+func menuSlotLabel(d service.OrderDetail) any {
+	if d.MenuDate == nil {
+		return nil
+	}
+	return menucal.SlotLabel(d.MenuSlot)
+}
+
+func emptyAsNil(s string) any {
+	if s == "" {
+		return nil
+	}
+	return s
 }
 
 func pickupLabel(d service.OrderDetail) any {

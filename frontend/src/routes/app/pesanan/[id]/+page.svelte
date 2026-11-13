@@ -25,6 +25,7 @@
 		<a href="/app/pesanan" class="text-sm font-extrabold text-od">← {c.orders}</a>
 		<h1 class="text-2xl">{o.code}</h1>
 		<p class="text-sm font-bold text-ink2">{o.customer.name} · {o.customer.wa}</p>
+		{#if o.menuDate}<p class="text-sm font-extrabold text-od">{o.batch?.title}</p>{/if}
 		<div class="card p-3 text-sm font-bold">
 			{#each o.items as it}<div class="flex py-1"><span class="flex-1">{it.qty}× {it.name}</span><span>Rp {rp(it.unitPrice * it.qty)}</span></div>{/each}
 			{#each o.charges as ch}<div class="flex py-1"><span class="flex-1">{ch.name}</span><span>Rp {rp(ch.amount)}</span></div>{/each}

@@ -800,7 +800,7 @@ func (q *Queries) ListBatchItemsForUpdate(ctx context.Context, batchID uuid.UUID
 }
 
 const listBatchesByBrand = `-- name: ListBatchesByBrand :many
-SELECT id, store_id, brand_id, code, title, status, opens_at, closes_at, ready_at, payment_deadline_mins, quota_total, allow_pickup, allow_delivery, notes, closed_at, created_at, pickup_slots, payment_deadline_at FROM po_batches WHERE brand_id = $1 ORDER BY created_at DESC
+SELECT id, store_id, brand_id, code, title, status, opens_at, closes_at, ready_at, payment_deadline_mins, quota_total, allow_pickup, allow_delivery, notes, closed_at, created_at, pickup_slots, payment_deadline_at FROM po_batches WHERE brand_id = $1 AND channel = 'po' ORDER BY created_at DESC
 `
 
 func (q *Queries) ListBatchesByBrand(ctx context.Context, brandID uuid.UUID) ([]PoBatch, error) {
@@ -945,7 +945,7 @@ func (q *Queries) ListCustomers(ctx context.Context, brandID uuid.UUID) ([]Custo
 }
 
 const listDueBatchCloses = `-- name: ListDueBatchCloses :many
-SELECT id, store_id, brand_id, code, title, status, opens_at, closes_at, ready_at, payment_deadline_mins, quota_total, allow_pickup, allow_delivery, notes, closed_at, created_at, pickup_slots, payment_deadline_at FROM po_batches WHERE status = 'open' AND closes_at <= now()
+SELECT id, store_id, brand_id, code, title, status, opens_at, closes_at, ready_at, payment_deadline_mins, quota_total, allow_pickup, allow_delivery, notes, closed_at, created_at, pickup_slots, payment_deadline_at FROM po_batches WHERE status = 'open' AND closes_at <= now() AND channel = 'po'
 `
 
 func (q *Queries) ListDueBatchCloses(ctx context.Context) ([]PoBatch, error) {
@@ -988,7 +988,7 @@ func (q *Queries) ListDueBatchCloses(ctx context.Context) ([]PoBatch, error) {
 }
 
 const listDueBatchOpens = `-- name: ListDueBatchOpens :many
-SELECT id, store_id, brand_id, code, title, status, opens_at, closes_at, ready_at, payment_deadline_mins, quota_total, allow_pickup, allow_delivery, notes, closed_at, created_at, pickup_slots, payment_deadline_at FROM po_batches WHERE status = 'scheduled' AND opens_at <= now()
+SELECT id, store_id, brand_id, code, title, status, opens_at, closes_at, ready_at, payment_deadline_mins, quota_total, allow_pickup, allow_delivery, notes, closed_at, created_at, pickup_slots, payment_deadline_at FROM po_batches WHERE status = 'scheduled' AND opens_at <= now() AND channel = 'po'
 `
 
 func (q *Queries) ListDueBatchOpens(ctx context.Context) ([]PoBatch, error) {
@@ -1086,7 +1086,7 @@ func (q *Queries) ListDueOrders(ctx context.Context) ([]Order, error) {
 }
 
 const listOpenBatchesByBrand = `-- name: ListOpenBatchesByBrand :many
-SELECT id, store_id, brand_id, code, title, status, opens_at, closes_at, ready_at, payment_deadline_mins, quota_total, allow_pickup, allow_delivery, notes, closed_at, created_at, pickup_slots, payment_deadline_at FROM po_batches WHERE brand_id = $1 AND status = 'open' ORDER BY closes_at
+SELECT id, store_id, brand_id, code, title, status, opens_at, closes_at, ready_at, payment_deadline_mins, quota_total, allow_pickup, allow_delivery, notes, closed_at, created_at, pickup_slots, payment_deadline_at FROM po_batches WHERE brand_id = $1 AND status = 'open' AND channel = 'po' ORDER BY closes_at
 `
 
 func (q *Queries) ListOpenBatchesByBrand(ctx context.Context, brandID uuid.UUID) ([]PoBatch, error) {

@@ -18,6 +18,7 @@
 <div class="px-4 pt-4">
 	<div class="flex items-center">
 		<h1 class="flex-1 text-2xl">PO</h1>
+		<a class="mr-2 text-sm font-extrabold text-od" href="/app/menu">{c.menu}</a>
 		<a class="btn sm" href="/app/po/baru">{c.makePo}</a>
 	</div>
 	<div class="mt-3 space-y-2">

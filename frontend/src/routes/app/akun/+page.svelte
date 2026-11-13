@@ -21,6 +21,7 @@
 	let bnum = $state('');
 	let bholder = $state('');
 	let brand = $derived(brandOf($me));
+	let nuts = $state<Record<string, any>>({});
 
 	onMount(async () => {
 		await loadMe();
@@ -31,11 +32,44 @@
 	async function refresh() {
 		if (!brand) return;
 		products = await api('/api/v1/brands/' + brand.id + '/products');
+		const next: Record<string, any> = {};
+		for (const p of products) {
+			const n = p.nutrition || {};
+			next[p.id] = {
+				kcal: n.kcal ?? '',
+				proteinG: n.proteinG ?? '',
+				carbG: n.carbG ?? '',
+				fatG: n.fatG ?? '',
+				allergens: (n.allergens || []).join(', '),
+				tags: (n.tags || []).join(', ')
+			};
+		}
+		nuts = next;
 		charges = await api('/api/v1/brands/' + brand.id + '/extra-charges');
 		banks = await api('/api/v1/brands/' + brand.id + '/bank-accounts');
 		templates = await api('/api/v1/brands/' + brand.id + '/templates');
 	}
 
+	function numOrNull(v: any) {
+		if (v === '' || v == null) return null;
+		const n = Number(v);
+		return Number.isFinite(n) ? n : null;
+	}
+	async function saveNut(id: string) {
+		const n = nuts[id];
+		await api('/api/v1/products/' + id + '/nutrition', {
+			method: 'PUT',
+			body: JSON.stringify({
+				kcal: numOrNull(n.kcal),
+				proteinG: numOrNull(n.proteinG),
+				carbG: numOrNull(n.carbG),
+				fatG: numOrNull(n.fatG),
+				allergens: String(n.allergens || '').split(',').map((s) => s.trim()).filter(Boolean),
+				tags: String(n.tags || '').split(',').map((s) => s.trim()).filter(Boolean)
+			})
+		});
+		await refresh();
+	}
 	async function addProduct() {
 		await api('/api/v1/brands/' + brand.id + '/products', { method: 'POST', body: JSON.stringify({ name: pname, price: Number(pprice), description: pdesc }) });
 		pname = '';
@@ -111,6 +145,20 @@
 					<div class="flex-1">{p.name}<div class="text-[11px] text-ink2">Rp {p.price.toLocaleString('id-ID')}</div></div>
 					<label class="text-[11px] text-od">foto<input class="hidden" type="file" accept="image/*" onchange={(e) => { const f = (e.target as HTMLInputElement).files?.[0]; if (f) photo(p.id, f); }} /></label>
 				</div>
+				{#if nuts[p.id]}
+					<details class="mt-1 rounded-xl bg-o3 p-2">
+						<summary class="text-[11px] font-extrabold text-od">{c.nutrition}</summary>
+						<div class="mt-2 grid grid-cols-2 gap-1">
+							<input class="h-9 rounded-lg border border-line px-2 text-xs" placeholder={c.kcal} bind:value={nuts[p.id].kcal} />
+							<input class="h-9 rounded-lg border border-line px-2 text-xs" placeholder={c.protein} bind:value={nuts[p.id].proteinG} />
+							<input class="h-9 rounded-lg border border-line px-2 text-xs" placeholder={c.carb} bind:value={nuts[p.id].carbG} />
+							<input class="h-9 rounded-lg border border-line px-2 text-xs" placeholder={c.fat} bind:value={nuts[p.id].fatG} />
+						</div>
+						<input class="mt-1 h-9 w-full rounded-lg border border-line px-2 text-xs" placeholder={c.allergens} bind:value={nuts[p.id].allergens} />
+						<input class="mt-1 h-9 w-full rounded-lg border border-line px-2 text-xs" placeholder={c.tagsHint} bind:value={nuts[p.id].tags} />
+						<button class="btn sm ghost mt-1" onclick={() => saveNut(p.id)}>{c.save}</button>
+					</details>
+				{/if}
 			{/each}
 			<div class="mt-2 grid gap-2">
 				<input class="h-10 rounded-xl border border-line px-2" placeholder={c.name} bind:value={pname} />
