@@ -33,6 +33,12 @@ func Load(public, private, subject, dir string) (*Sender, error) {
 		}
 	}
 	if s.Public == "" || s.Private == "" {
+		// A generated key pair on Vercel would change every cold start and
+		// break subscriptions. Require the env pair there; local dev still
+		// writes vapid.json into the upload directory.
+		if os.Getenv("VERCEL") == "1" {
+			return s, nil
+		}
 		priv, pub, err := webpush.GenerateVAPIDKeys()
 		if err != nil {
 			return s, err

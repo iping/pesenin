@@ -8,6 +8,7 @@ import (
 	"errors"
 	"fmt"
 	"log/slog"
+	"sync"
 	"time"
 
 	"github.com/google/uuid"
@@ -42,6 +43,8 @@ type App struct {
 	Cfg  config.Config
 	Blob storage.ObjectStore
 	Push *push.Sender
+
+	tickMu sync.Mutex
 }
 
 func New(pool *pgxpool.Pool, cfg config.Config, blob storage.ObjectStore, sender *push.Sender) *App {

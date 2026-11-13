@@ -6,9 +6,11 @@ import (
 	"net/http"
 	"os"
 	"os/signal"
+	"strings"
 	"syscall"
 	"time"
 
+	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 
 	"pesenin.product.biz.id/api/internal/config"
@@ -22,14 +24,21 @@ import (
 func main() {
 	slog.SetDefault(slog.New(slog.NewJSONHandler(os.Stdout, nil)))
 	cfg := config.Load()
+	if len(os.Args) > 1 && os.Args[1] == "migrate" {
+		if err := runMigrate(cfg.MigrateURL); err != nil {
+			slog.Error("migrate", "err", err)
+			os.Exit(1)
+		}
+		return
+	}
 	ctx, stop := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)
 	defer stop()
 
-	if err := migrate.Up(cfg.DatabaseURL); err != nil {
+	if err := runMigrate(cfg.MigrateURL); err != nil {
 		slog.Error("migrate", "err", err)
 		os.Exit(1)
 	}
-	pool, err := pgxpool.New(ctx, cfg.DatabaseURL)
+	pool, err := openPool(ctx, cfg.DatabaseURL)
 	if err != nil {
 		slog.Error("db", "err", err)
 		os.Exit(1)
@@ -58,7 +67,11 @@ func main() {
 		os.Exit(1)
 	}
 	if cfg.VAPIDPublic == "" {
-		slog.Warn("vapid keys were generated for local dev; set VAPID_PUBLIC_KEY and VAPID_PRIVATE_KEY in production")
+		if os.Getenv("VERCEL") == "1" {
+			slog.Warn("web push disabled; set VAPID_PUBLIC_KEY and VAPID_PRIVATE_KEY")
+		} else {
+			slog.Warn("vapid keys were generated for local dev; set VAPID_PUBLIC_KEY and VAPID_PRIVATE_KEY in production")
+		}
 	}
 
 	app := service.New(pool, cfg, blob, sender)
@@ -86,4 +99,28 @@ func main() {
 		slog.Error("listen", "err", err)
 		os.Exit(1)
 	}
+}
+
+func runMigrate(databaseURL string) error {
+	if err := migrate.Up(databaseURL); err != nil {
+		return err
+	}
+	slog.Info("migrations applied")
+	return nil
+}
+
+func openPool(ctx context.Context, databaseURL string) (*pgxpool.Pool, error) {
+	cfg, err := pgxpool.ParseConfig(databaseURL)
+	if err != nil {
+		return nil, err
+	}
+	// Neon's pooled host is PgBouncer in transaction mode. Prepared-statement
+	// caching fails there; the simple protocol does not. Direct URLs are unchanged.
+	if strings.Contains(databaseURL, "-pooler") {
+		cfg.ConnConfig.DefaultQueryExecMode = pgx.QueryExecModeExec
+	}
+	if os.Getenv("VERCEL") == "1" && cfg.MaxConns > 4 {
+		cfg.MaxConns = 4
+	}
+	return pgxpool.NewWithConfig(ctx, cfg)
 }

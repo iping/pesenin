@@ -4,6 +4,7 @@ package clock
 import (
 	"fmt"
 	"time"
+	_ "time/tzdata" // Vercel's Go runtime has no system zoneinfo; WIB/WITA/WIT stay correct.
 )
 
 // Snap15 moves t onto a 15-minute boundary (:00, :15, :30, :45), dropping seconds.
