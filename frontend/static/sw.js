@@ -1,6 +1,6 @@
 self.addEventListener('install', (event) => {
 	event.waitUntil(
-		caches.open('pesenin-shell-v2').then((cache) =>
+		caches.open('pesenin-shell-v3').then((cache) =>
 			cache.addAll(['/favicon.ico', '/icon-192.png', '/icon-512.png', '/icon-maskable-192.png', '/icon-maskable-512.png', '/site.webmanifest'])
 		)
 	);
@@ -8,7 +8,12 @@ self.addEventListener('install', (event) => {
 });
 
 self.addEventListener('activate', (event) => {
-	event.waitUntil(self.clients.claim());
+	event.waitUntil(
+		caches
+			.keys()
+			.then((keys) => Promise.all(keys.filter((k) => k.startsWith('pesenin-shell-') && k !== 'pesenin-shell-v3').map((k) => caches.delete(k))))
+			.then(() => self.clients.claim())
+	);
 });
 
 self.addEventListener('fetch', (event) => {

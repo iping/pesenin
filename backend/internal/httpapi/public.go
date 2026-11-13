@@ -1,6 +1,7 @@
 package httpapi
 
 import (
+	"errors"
 	"io"
 	"net/http"
 	"strconv"
@@ -11,7 +12,9 @@ import (
 	qrcode "github.com/skip2/go-qrcode"
 
 	"pesenin.product.biz.id/api/internal/db"
+	"pesenin.product.biz.id/api/internal/images"
 	"pesenin.product.biz.id/api/internal/service"
+	"pesenin.product.biz.id/api/internal/storage"
 )
 
 var bankCodes = []map[string]string{
@@ -97,7 +100,8 @@ func (s *Server) writePublic(w http.ResponseWriter, r *http.Request, slug, store
 	photos := map[string]any{}
 	for _, p := range products {
 		if p.PhotoUrl != nil {
-			photos[p.ID.String()] = *p.PhotoUrl
+			v := images.Describe(*p.PhotoUrl)
+			photos[p.ID.String()] = v.Src
 		}
 	}
 	writeJSON(w, 200, map[string]any{
@@ -105,10 +109,10 @@ func (s *Server) writePublic(w http.ResponseWriter, r *http.Request, slug, store
 			"name": brand.Name, "slug": brand.Slug, "description": brand.Description,
 			"waNumber": brand.WaNumber, "logoUrl": brand.LogoUrl,
 		},
-		"store":    storeJSON(store),
-		"batches":  open,
-		"charges":  chs,
-		"photos":   photos,
+		"store":     storeJSON(store),
+		"batches":   open,
+		"charges":   chs,
+		"photos":    photos,
 		"ordering":  store.IsOpen || store.AcceptPreordersWhenClosed,
 		"serverNow": time.Now().UTC().Format(time.RFC3339),
 	})
@@ -121,7 +125,7 @@ func (s *Server) batchWithPhotos(r *http.Request, b db.PoBatch, items []db.Batch
 		p, err := s.App.Q.GetProduct(r.Context(), it.ProductID)
 		m := list[i].(map[string]any)
 		if err == nil {
-			m["photoUrl"] = p.PhotoUrl
+			applyPhoto(m, p.PhotoUrl)
 			m["description"] = p.Description
 		}
 		list[i] = m
@@ -211,14 +215,18 @@ func (s *Server) publicOrder(w http.ResponseWriter, r *http.Request) {
 }
 
 func (s *Server) publicProof(w http.ResponseWriter, r *http.Request) {
-	s.uploadProof(w, r, func(key string, rc io.Reader, mime string, n int) error {
-		return s.App.SaveProof(r.Context(), chi.URLParam(r, "token"), rc, mime, n)
+	s.uploadProof(w, r, func(rc io.Reader, mime string) error {
+		return s.App.SaveProof(r.Context(), chi.URLParam(r, "token"), rc, mime)
 	})
 }
 
-func (s *Server) uploadProof(w http.ResponseWriter, r *http.Request, save func(string, io.Reader, string, int) error) {
-	r.Body = http.MaxBytesReader(w, r.Body, 3<<20)
-	if err := r.ParseMultipartForm(3 << 20); err != nil {
+func (s *Server) uploadProof(w http.ResponseWriter, r *http.Request, save func(io.Reader, string) error) {
+	r.Body = http.MaxBytesReader(w, r.Body, images.MaxUploadBytes)
+	if err := r.ParseMultipartForm(images.MaxUploadBytes); err != nil {
+		if tooLarge(err) {
+			writeErr(w, service.E(400, "bad_file", images.ErrTooLarge.Message))
+			return
+		}
 		writeErr(w, service.E(400, "bad_file", "Bukti belum kebaca. Coba foto yang lebih kecil."))
 		return
 	}
@@ -232,7 +240,7 @@ func (s *Server) uploadProof(w http.ResponseWriter, r *http.Request, save func(s
 	if mime == "" || mime == "application/octet-stream" {
 		mime = sniff(hdr.Filename)
 	}
-	if err := save("", f, mime, int(hdr.Size)); err != nil {
+	if err := save(f, mime); err != nil {
 		writeErr(w, err)
 		return
 	}
@@ -246,6 +254,28 @@ func sniff(name string) string {
 		return "image/png"
 	case strings.HasSuffix(n, ".webp"):
 		return "image/webp"
+	case strings.HasSuffix(n, ".gif"):
+		return "image/gif"
+	case strings.HasSuffix(n, ".heic"), strings.HasSuffix(n, ".heif"):
+		return "image/heic"
+	default:
+		return "image/jpeg"
+	}
+}
+
+func tooLarge(err error) bool {
+	var max *http.MaxBytesError
+	return errors.As(err, &max) || (err != nil && strings.Contains(err.Error(), "too large"))
+}
+
+func mediaType(key string) string {
+	switch {
+	case strings.HasSuffix(key, ".png"):
+		return "image/png"
+	case strings.HasSuffix(key, ".webp"):
+		return "image/webp"
+	case strings.HasSuffix(key, ".gif"):
+		return "image/gif"
 	default:
 		return "image/jpeg"
 	}
@@ -279,14 +309,8 @@ func (s *Server) media(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	defer rc.Close()
-	switch {
-	case strings.HasSuffix(key, ".png"):
-		w.Header().Set("Content-Type", "image/png")
-	case strings.HasSuffix(key, ".webp"):
-		w.Header().Set("Content-Type", "image/webp")
-	default:
-		w.Header().Set("Content-Type", "image/jpeg")
-	}
-	w.Header().Set("Cache-Control", "private, max-age=3600")
+	w.Header().Set("Content-Type", mediaType(key))
+	w.Header().Set("Cache-Control", storage.CacheControl(key))
+	w.Header().Set("X-Content-Type-Options", "nosniff")
 	_, _ = io.Copy(w, rc)
 }

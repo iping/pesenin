@@ -4,6 +4,8 @@
 	import { lang, copy } from '$lib/i18n';
 	import { me, loadMe, brandOf } from '$lib/session';
 	import { api } from '$lib/api';
+	import { prepareUpload, uploadAccept } from '$lib/images';
+	import PingImage from '$lib/components/PingImage.svelte';
 
 	let c = $derived(copy($lang));
 	let products = $state<any[]>([]);
@@ -21,6 +23,7 @@
 	let bnum = $state('');
 	let bholder = $state('');
 	let brand = $derived(brandOf($me));
+	let photoErr = $state('');
 
 	onMount(async () => {
 		await loadMe();
@@ -42,10 +45,21 @@
 		await refresh();
 	}
 	async function photo(id: string, file: File) {
-		const body = new FormData();
-		body.append('file', file);
-		await fetch('/api/v1/products/' + id + '/photo', { method: 'POST', body, credentials: 'include' });
-		await refresh();
+		photoErr = '';
+		try {
+			const prepared = await prepareUpload(file, 'product');
+			const body = new FormData();
+			body.append('file', prepared);
+			const res = await fetch('/api/v1/products/' + id + '/photo', { method: 'POST', body, credentials: 'include' });
+			if (!res.ok) {
+				const j = await res.json().catch(() => ({}));
+				photoErr = j.message || 'Foto belum kebaca.';
+				return;
+			}
+			await refresh();
+		} catch (e) {
+			photoErr = e instanceof Error ? e.message : 'Foto belum kebaca.';
+		}
 	}
 	async function addCharge() {
 		const methods = cmethod === 'both' ? ['pickup', 'delivery'] : [cmethod];
@@ -107,11 +121,12 @@
 			<div class="fd">{c.products}</div>
 			{#each products as p}
 				<div class="mt-2 flex items-center gap-2 text-sm font-bold">
-					<img src={p.photoUrl || '/brand/placeholder-1x1.png'} alt="" class="h-10 w-10 rounded-lg object-cover" />
+					<span class="relative h-10 w-10 shrink-0 overflow-hidden rounded-lg"><PingImage src={p.photoUrl} alt="" sizes="40px" /></span>
 					<div class="flex-1">{p.name}<div class="text-[11px] text-ink2">Rp {p.price.toLocaleString('id-ID')}</div></div>
-					<label class="text-[11px] text-od">foto<input class="hidden" type="file" accept="image/*" onchange={(e) => { const f = (e.target as HTMLInputElement).files?.[0]; if (f) photo(p.id, f); }} /></label>
+					<label class="text-[11px] text-od">foto<input class="hidden" type="file" accept={uploadAccept} onchange={(e) => { const f = (e.target as HTMLInputElement).files?.[0]; if (f) photo(p.id, f); }} /></label>
 				</div>
 			{/each}
+			{#if photoErr}<p class="mt-2 text-xs font-extrabold text-danger">{photoErr}</p>{/if}
 			<div class="mt-2 grid gap-2">
 				<input class="h-10 rounded-xl border border-line px-2" placeholder={c.name} bind:value={pname} />
 				<input class="h-10 rounded-xl border border-line px-2" type="number" bind:value={pprice} />

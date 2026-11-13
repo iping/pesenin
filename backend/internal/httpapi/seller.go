@@ -8,6 +8,7 @@ import (
 	"github.com/google/uuid"
 
 	"pesenin.product.biz.id/api/internal/db"
+	"pesenin.product.biz.id/api/internal/images"
 	"pesenin.product.biz.id/api/internal/service"
 )
 
@@ -204,10 +205,12 @@ func (s *Server) listProducts(w http.ResponseWriter, r *http.Request) {
 	}
 	out := []any{}
 	for _, p := range rows {
-		out = append(out, map[string]any{
+		item := map[string]any{
 			"id": p.ID, "name": p.Name, "description": p.Description, "price": p.BasePrice,
-			"photoUrl": p.PhotoUrl, "active": p.Active, "variants": by[p.ID],
-		})
+			"active": p.Active, "variants": by[p.ID],
+		}
+		applyPhoto(item, p.PhotoUrl)
+		out = append(out, item)
 	}
 	writeJSON(w, 200, out)
 }
@@ -279,8 +282,12 @@ func (s *Server) productPhoto(w http.ResponseWriter, r *http.Request) {
 		writeErr(w, err)
 		return
 	}
-	r.Body = http.MaxBytesReader(w, r.Body, 3<<20)
-	if err := r.ParseMultipartForm(3 << 20); err != nil {
+	r.Body = http.MaxBytesReader(w, r.Body, images.MaxUploadBytes)
+	if err := r.ParseMultipartForm(images.MaxUploadBytes); err != nil {
+		if tooLarge(err) {
+			writeErr(w, service.E(400, "bad_file", images.ErrTooLarge.Message))
+			return
+		}
 		writeErr(w, service.E(400, "bad_file", "Foto belum kebaca."))
 		return
 	}
@@ -294,24 +301,14 @@ func (s *Server) productPhoto(w http.ResponseWriter, r *http.Request) {
 	if mime == "" || mime == "application/octet-stream" {
 		mime = sniff(hdr.Filename)
 	}
-	ext := "jpg"
-	if mime == "image/png" {
-		ext = "png"
-	} else if mime == "image/webp" {
-		ext = "webp"
-	}
-	key := "products/" + uuid.NewString() + "." + ext
-	if err := s.App.Blob.Put(r.Context(), key, f, mime); err != nil {
-		writeErr(w, err)
-		return
-	}
-	url := "/api/v1/media/" + key
-	p, err := s.App.SetProductPhoto(r.Context(), user(r).ID, id, url)
+	p, err := s.App.SaveProductPhoto(r.Context(), user(r).ID, id, f, mime)
 	if err != nil {
 		writeErr(w, err)
 		return
 	}
-	writeJSON(w, 200, map[string]any{"photoUrl": p.PhotoUrl})
+	out := map[string]any{}
+	applyPhoto(out, p.PhotoUrl)
+	writeJSON(w, 200, out)
 }
 
 func (s *Server) listCharges(w http.ResponseWriter, r *http.Request) {
@@ -545,20 +542,20 @@ func (s *Server) patchBatch(w http.ResponseWriter, r *http.Request) {
 
 func readBatch(r *http.Request) (service.BatchIn, error) {
 	var raw struct {
-		StoreID       uuid.UUID `json:"storeId"`
-		Title         string    `json:"title"`
+		StoreID           uuid.UUID      `json:"storeId"`
+		Title             string         `json:"title"`
 		OpensAt           time.Time      `json:"opensAt"`
 		ClosesAt          time.Time      `json:"closesAt"`
 		ReadyAt           time.Time      `json:"readyAt"`
 		PickupSlots       []service.Slot `json:"pickupSlots"`
 		DeadlineMins      *int32         `json:"paymentDeadlineMins"`
 		PaymentDeadlineAt *time.Time     `json:"paymentDeadlineAt"`
-		QuotaTotal    *int32    `json:"quotaTotal"`
-		AllowPickup   bool      `json:"allowPickup"`
-		AllowDelivery bool      `json:"allowDelivery"`
-		Notes         string    `json:"notes"`
-		Publish       bool      `json:"publish"`
-		Items         []struct {
+		QuotaTotal        *int32         `json:"quotaTotal"`
+		AllowPickup       bool           `json:"allowPickup"`
+		AllowDelivery     bool           `json:"allowDelivery"`
+		Notes             string         `json:"notes"`
+		Publish           bool           `json:"publish"`
+		Items             []struct {
 			ProductID uuid.UUID  `json:"productId"`
 			VariantID *uuid.UUID `json:"variantId"`
 			Price     int64      `json:"price"`

@@ -3,6 +3,7 @@
 	import { onMount } from 'svelte';
 	import { lang, copy } from '$lib/i18n';
 	import { api, ApiError } from '$lib/api';
+	import PingImage from '$lib/components/PingImage.svelte';
 
 	let c = $derived(copy($lang));
 	let rec = $state<any>(null);
@@ -49,7 +50,7 @@
 		<div class="grid grid-cols-2 gap-2">
 			{#each rec.products as p}
 				<div class="card p-2.5">
-					<img src={p.Photo || '/brand/placeholder-1x1.png'} alt="" class="h-8 w-8 rounded-lg object-cover" />
+					<span class="relative h-8 w-8 shrink-0 overflow-hidden rounded-lg"><PingImage src={p.Photo} alt="" sizes="32px" /></span>
 					<b class="fd text-xl">{p.Qty}</b>
 					<div class="text-[11px] font-bold text-ink2">{p.Name} {p.Variant}</div>
 				</div>

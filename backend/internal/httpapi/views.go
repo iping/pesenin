@@ -8,6 +8,7 @@ import (
 
 	"pesenin.product.biz.id/api/internal/clock"
 	"pesenin.product.biz.id/api/internal/db"
+	"pesenin.product.biz.id/api/internal/images"
 	"pesenin.product.biz.id/api/internal/service"
 )
 
@@ -63,7 +64,7 @@ func storeJSON(st db.Store) map[string]any {
 	return map[string]any{
 		"id": st.ID, "name": st.Name, "slug": st.Slug, "address": st.Address, "mapsUrl": st.MapsUrl,
 		"timezone": st.Timezone,
-		"isOpen": st.IsOpen, "acceptPreordersWhenClosed": st.AcceptPreordersWhenClosed, "isDefault": st.IsDefault,
+		"isOpen":   st.IsOpen, "acceptPreordersWhenClosed": st.AcceptPreordersWhenClosed, "isDefault": st.IsDefault,
 	}
 }
 
@@ -90,7 +91,7 @@ func batchJSON(b db.PoBatch, items []db.BatchItem, tz string) map[string]any {
 	return map[string]any{
 		"id": b.ID, "code": b.Code, "title": b.Title, "status": b.Status,
 		"opensAt": ts(b.OpensAt), "closesAt": ts(b.ClosesAt), "readyAt": ts(b.ReadyAt),
-		"pickupSlots": slotJSON(b.PickupSlots, tz),
+		"pickupSlots":       slotJSON(b.PickupSlots, tz),
 		"paymentDeadlineAt": tsP(b.PaymentDeadlineAt), "paymentDeadlineMins": b.PaymentDeadlineMins, "quotaTotal": b.QuotaTotal,
 		"allowPickup": b.AllowPickup, "allowDelivery": b.AllowDelivery, "notes": b.Notes,
 		"timezone": tz, "serverNow": time.Now().UTC().Format(time.RFC3339),
@@ -128,8 +129,10 @@ func orderJSON(d service.OrderDetail) map[string]any {
 	}
 	proofs := []any{}
 	for _, p := range d.Proofs {
+		v := images.Describe(p.ObjectKey)
 		proofs = append(proofs, map[string]any{
-			"id": p.ID, "url": "/api/v1/media/" + p.ObjectKey, "mime": p.Mime,
+			"id": p.ID, "url": v.Src, "displayUrl": v.Display, "thumbUrl": v.Thumb,
+			"srcset": v.Srcset, "width": v.FullWidth, "mime": p.Mime,
 			"status": p.ReviewStatus, "rejectReason": p.RejectReason, "uploadedAt": ts(p.UploadedAt),
 		})
 	}
@@ -143,7 +146,7 @@ func orderJSON(d service.OrderDetail) map[string]any {
 		"expiresAt": tsP(d.Order.ExpiresAt), "paidAt": tsP(d.Order.PaidAt), "createdAt": ts(d.Order.CreatedAt),
 		"pickupSlotStart": tsP(d.Order.PickupSlotStart), "pickupSlotEnd": tsP(d.Order.PickupSlotEnd),
 		"serverNow": time.Now().UTC().Format(time.RFC3339),
-		"items": items, "charges": charges, "latestRejectReason": reject, "proofs": proofs,
+		"items":     items, "charges": charges, "latestRejectReason": reject, "proofs": proofs,
 		"customer": map[string]any{"id": d.Customer.ID, "name": d.Customer.Name, "wa": d.Customer.WaNumberE164, "ordersCount": d.Customer.OrdersCount},
 		"bank":     map[string]any{"bankCode": d.Bank.BankCode, "accountNumber": d.Bank.AccountNumber, "holderName": d.Bank.HolderName},
 		"batch": map[string]any{
@@ -152,8 +155,8 @@ func orderJSON(d service.OrderDetail) map[string]any {
 			"pickupSlots": slotJSON(d.Batch.PickupSlots, d.Store.Timezone),
 		},
 		"pickupSlotLabel": pickupLabel(d),
-		"store": map[string]any{"name": d.Store.Name, "address": d.Store.Address, "isOpen": d.Store.IsOpen, "timezone": d.Store.Timezone},
-		"brand":    map[string]any{"name": d.Brand.Name, "slug": d.Brand.Slug, "waNumber": d.Brand.WaNumber},
+		"store":           map[string]any{"name": d.Store.Name, "address": d.Store.Address, "isOpen": d.Store.IsOpen, "timezone": d.Store.Timezone},
+		"brand":           map[string]any{"name": d.Brand.Name, "slug": d.Brand.Slug, "waNumber": d.Brand.WaNumber},
 	}
 }
 
@@ -166,6 +169,19 @@ func pickupLabel(d service.OrderDetail) any {
 		tz = "Asia/Jakarta"
 	}
 	return clock.Slot(d.Order.PickupSlotStart.Time, d.Order.PickupSlotEnd.Time, tz)
+}
+
+func applyPhoto(m map[string]any, url *string) {
+	if url == nil || *url == "" {
+		m["photoUrl"] = nil
+		return
+	}
+	v := images.Describe(*url)
+	m["photoUrl"] = v.Src
+	if v.Srcset != "" {
+		m["photoSrcset"] = v.Srcset
+		m["photoThumbUrl"] = v.Thumb
+	}
 }
 
 func uuidOrNil(id pgtype.UUID) any {
@@ -184,7 +200,11 @@ func topupJSON(t db.Topup, bank *db.PlatformBankAccount) map[string]any {
 		"proofUrl": nil, "serverNow": time.Now().UTC().Format(time.RFC3339),
 	}
 	if t.ProofKey != nil {
-		out["proofUrl"] = "/api/v1/media/" + *t.ProofKey
+		v := images.Describe(*t.ProofKey)
+		out["proofUrl"] = v.Src
+		out["proofDisplayUrl"] = v.Display
+		out["proofSrcset"] = v.Srcset
+		out["proofWidth"] = v.FullWidth
 	}
 	if bank != nil {
 		out["bank"] = map[string]any{"bankCode": bank.BankCode, "accountNumber": bank.AccountNumber, "holderName": bank.HolderName}

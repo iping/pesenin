@@ -4,6 +4,7 @@
 	import { lang, copy } from '$lib/i18n';
 	import { api } from '$lib/api';
 	import { rp, when } from '$lib/format';
+	import ProofImage from '$lib/components/ProofImage.svelte';
 
 	let c = $derived(copy($lang));
 	let o = $state<any>(null);
@@ -33,7 +34,7 @@
 			<p class="mt-1 text-[11px] text-ink2">{o.paymentStatus} · {o.fulfilmentStatus} · {when(o.createdAt)}</p>
 		</div>
 		{#each o.proofs as p}
-			<img src={p.url} alt="bukti" class="max-h-64 w-full rounded-2xl object-contain bg-white" />
+			<ProofImage url={p.url} />
 		{/each}
 		<div class="grid grid-cols-2 gap-2">
 			{#if o.paymentStatus === 'pending' || o.paymentStatus === 'proof_submitted'}

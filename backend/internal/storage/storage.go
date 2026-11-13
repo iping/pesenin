@@ -105,12 +105,27 @@ func (s *S3) Put(ctx context.Context, key string, r io.Reader, mime string) erro
 		return err
 	}
 	_, err = s.Client.PutObject(ctx, &s3.PutObjectInput{
-		Bucket:      aws.String(s.Bucket),
-		Key:         aws.String(key),
-		Body:        r,
-		ContentType: aws.String(mime),
+		Bucket:       aws.String(s.Bucket),
+		Key:          aws.String(key),
+		Body:         r,
+		ContentType:  aws.String(mime),
+		CacheControl: aws.String(CacheControl(key)),
 	})
 	return err
+}
+
+// CacheControl is the header for an object key. Uploaded images are
+// content-addressed by UUID, so they never change at that URL.
+// Proofs stay private: a shared cache must not keep bank-transfer photos.
+func CacheControl(key string) string {
+	switch {
+	case strings.HasPrefix(key, "products/"):
+		return "public, max-age=31536000, immutable, no-transform"
+	case strings.HasPrefix(key, "proofs/"), strings.HasPrefix(key, "topups/"):
+		return "private, max-age=31536000, immutable, no-transform"
+	default:
+		return "private, max-age=86400"
+	}
 }
 
 func (s *S3) Open(ctx context.Context, key string) (io.ReadCloser, error) {
