@@ -105,7 +105,13 @@ func (a *App) CreateBrand(ctx context.Context, userID uuid.UUID, in NewBrand) (d
 		a.audit(ctx, q, &acc.ID, &userID, "brand.create", "brand", brand.ID.String(), nil, map[string]string{"slug": slug, "name": in.Name})
 		return nil
 	})
-	return brand, store, err
+	if err != nil {
+		return brand, store, err
+	}
+	if err := a.SyncContactKYC(ctx, userID); err != nil {
+		return brand, store, err
+	}
+	return brand, store, nil
 }
 
 type StorePatch struct {

@@ -124,6 +124,7 @@ func (s *Server) writePublic(w http.ResponseWriter, r *http.Request, slug, store
 		"brand": map[string]any{
 			"name": brand.Name, "slug": brand.Slug, "description": brand.Description,
 			"waNumber": brand.WaNumber, "logoUrl": brand.LogoUrl,
+			"verified": s.App.BrandBadge(r.Context(), brand.ID),
 		},
 		"store":      storeJSON(store, status),
 		"batches":    open,
@@ -186,7 +187,7 @@ func (s *Server) publicBatch(w http.ResponseWriter, r *http.Request) {
 	ordering := b.Status == "open" && hours.Ordering(status.Open, store.AcceptPreordersWhenClosed, pickups, now, store.Timezone)
 	writeJSON(w, 200, map[string]any{
 		"batch":      s.batchWithPhotos(r, b, items, store.Timezone),
-		"brand":      map[string]any{"name": brand.Name, "slug": brand.Slug, "waNumber": brand.WaNumber, "description": brand.Description},
+		"brand":      map[string]any{"name": brand.Name, "slug": brand.Slug, "waNumber": brand.WaNumber, "description": brand.Description, "verified": s.App.BrandBadge(r.Context(), brand.ID)},
 		"store":      storeJSON(store, status),
 		"charges":    chs,
 		"ordering":   ordering,

@@ -19,11 +19,15 @@ import (
 // Nothing is cached and nothing is written: a manual override that has
 // reached its end simply stops applying.
 func (a *App) StoreStatuses(ctx context.Context, stores []db.Store, now time.Time) (map[uuid.UUID]hours.Status, error) {
+	return storeStatuses(ctx, a.Pool, stores, now)
+}
+
+func storeStatuses(ctx context.Context, q rowQuery, stores []db.Store, now time.Time) (map[uuid.UUID]hours.Status, error) {
 	out := map[uuid.UUID]hours.Status{}
 	if len(stores) == 0 {
 		return out, nil
 	}
-	in, err := a.loadInputs(ctx, stores, now)
+	in, err := loadInputs(ctx, q, stores, now)
 	if err != nil {
 		return nil, err
 	}
@@ -59,7 +63,15 @@ type overrideRow struct {
 	Ends   *time.Time
 }
 
+type rowQuery interface {
+	Query(context.Context, string, ...any) (pgx.Rows, error)
+}
+
 func (a *App) loadInputs(ctx context.Context, stores []db.Store, now time.Time) (map[uuid.UUID]hours.Input, error) {
+	return loadInputs(ctx, a.Pool, stores, now)
+}
+
+func loadInputs(ctx context.Context, q rowQuery, stores []db.Store, now time.Time) (map[uuid.UUID]hours.Input, error) {
 	storeIDs := make([]uuid.UUID, 0, len(stores))
 	brandIDs := make([]uuid.UUID, 0, len(stores))
 	seenBrand := map[uuid.UUID]struct{}{}
@@ -71,7 +83,7 @@ func (a *App) loadInputs(ctx context.Context, stores []db.Store, now time.Time) 
 		}
 	}
 	prefs := map[uuid.UUID]bool{}
-	prows, err := a.Pool.Query(ctx, `SELECT store_id, inherit FROM store_hour_prefs WHERE store_id = ANY($1)`, storeIDs)
+	prows, err := q.Query(ctx, `SELECT store_id, inherit FROM store_hour_prefs WHERE store_id = ANY($1)`, storeIDs)
 	if err != nil {
 		return nil, err
 	}
@@ -90,15 +102,15 @@ func (a *App) loadInputs(ctx context.Context, stores []db.Store, now time.Time) 
 	}
 
 	storeDays := map[uuid.UUID][]hours.Day{}
-	if err := scanDays(ctx, a.Pool, `SELECT store_id, weekday, closed, slots FROM store_weekly_hours WHERE store_id = ANY($1)`, storeIDs, storeDays); err != nil {
+	if err := scanDays(ctx, q, `SELECT store_id, weekday, closed, slots FROM store_weekly_hours WHERE store_id = ANY($1)`, storeIDs, storeDays); err != nil {
 		return nil, err
 	}
 	brandDays := map[uuid.UUID][]hours.Day{}
-	if err := scanDays(ctx, a.Pool, `SELECT brand_id, weekday, closed, slots FROM brand_weekly_hours WHERE brand_id = ANY($1)`, brandIDs, brandDays); err != nil {
+	if err := scanDays(ctx, q, `SELECT brand_id, weekday, closed, slots FROM brand_weekly_hours WHERE brand_id = ANY($1)`, brandIDs, brandDays); err != nil {
 		return nil, err
 	}
 
-	srows, err := a.Pool.Query(ctx, `
+	srows, err := q.Query(ctx, `
 		SELECT id, brand_id, store_id, date_from, date_to, closed, slots, note
 		FROM special_hours WHERE brand_id = ANY($1)`, brandIDs)
 	if err != nil {
@@ -127,7 +139,7 @@ func (a *App) loadInputs(ctx context.Context, stores []db.Store, now time.Time) 
 		return nil, err
 	}
 
-	orows, err := a.Pool.Query(ctx, `
+	orows, err := q.Query(ctx, `
 		SELECT DISTINCT ON (store_id) store_id, kind, reason, starts_at, ends_at
 		FROM store_overrides
 		WHERE store_id = ANY($1) AND cleared_at IS NULL

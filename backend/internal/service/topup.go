@@ -54,6 +54,9 @@ func (a *App) CreateTopup(ctx context.Context, userID uuid.UUID, amount int64, i
 	if err != nil {
 		return db.Topup{}, E(403, "no_account", "Akun penjual belum ada.")
 	}
+	if err := a.GateTopup(ctx, userID); err != nil {
+		return db.Topup{}, err
+	}
 	quote, settings, err := a.QuoteTopup(ctx, amount)
 	if err != nil {
 		return db.Topup{}, err

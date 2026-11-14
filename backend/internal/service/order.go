@@ -152,6 +152,9 @@ func (a *App) PlaceOrder(ctx context.Context, code string, in PlaceOrder) (db.Or
 	if err != nil {
 		return db.Order{}, err
 	}
+	if err := a.GateBrand(ctx, batch.BrandID); err != nil {
+		return db.Order{}, err
+	}
 	settings, err := a.LoadSettings(ctx)
 	if err != nil {
 		return db.Order{}, err
@@ -252,10 +255,13 @@ func (a *App) PlaceOrder(ctx context.Context, code string, in PlaceOrder) (db.Or
 		// Closed stores refuse an order for today. A later pickup date is a
 		// pre-order and is allowed only when the store says so.
 		now := time.Now()
-		status, err := a.StoreStatus(ctx, store, now)
+		// Read hours on this transaction. A second pool connection here
+		// deadlocks when every connection is already inside PlaceOrder.
+		statuses, err := storeStatuses(ctx, tx, []db.Store{store}, now)
 		if err != nil {
 			return err
 		}
+		status := statuses[store.ID]
 		if ok, why := hours.AllowOrder(status.Open, store.AcceptPreordersWhenClosed, slotStart, now, store.Timezone); !ok {
 			if why == "immediate" {
 				return E(409, "store_closed", "Toko sedang tutup. Pesanan untuk hari ini belum bisa, pilih tanggal ambil lain ya.")

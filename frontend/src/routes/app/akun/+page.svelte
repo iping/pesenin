@@ -94,6 +94,7 @@
 	</div>
 	{#if $me}
 		<p class="text-sm font-bold text-ink2">{$me.user.name} · {$me.user.email}</p>
+		<a class="text-sm font-extrabold text-od" href="/app/verifikasi">{c.verifyTitle}</a>
 		{#if $me.user.isPlatformAdmin}<a class="btn sm" href="/app/admin">{c.admin}</a>{/if}
 	{/if}
 	{#if brand}

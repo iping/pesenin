@@ -15,7 +15,14 @@
 	let askPush = $state(false);
 	let err = $state('');
 
-	const hideNav = $derived(path.startsWith('/app/masuk') || path.startsWith('/app/mulai'));
+	const hideNav = $derived(
+		path.startsWith('/app/masuk') ||
+			path.startsWith('/app/daftar') ||
+			path.startsWith('/app/lupa-sandi') ||
+			path.startsWith('/app/atur-sandi') ||
+			path.startsWith('/app/verifikasi-email') ||
+			path.startsWith('/app/mulai')
+	);
 
 	onMount(async () => {
 		const ua = navigator.userAgent;
@@ -79,6 +86,12 @@
 			<b class="fd">{c.installTitle}</b>
 			<div class="opacity-80">{c.installBody}</div>
 		</div>
+	{/if}
+	{#if $me?.verification && (!$me.verification.emailVerified || !$me.verification.whatsappVerified) && !hideNav}
+		<a href="/app/verifikasi" class="mx-3 mt-3 block rounded-2xl bg-o3 px-3 py-2 text-sm font-extrabold text-od">
+			{$me.verification.kycGate ? c.verifyBanner : c.verifyBannerSoft}
+			<span class="mt-1 block text-ink">{c.verifyNow}</span>
+		</a>
 	{/if}
 	{#if $me?.lowBalance && !$me?.softLocked && !hideNav}
 		<a href="/app/koin" class="mx-3 mt-3 block rounded-2xl bg-[#FFF8DB] px-3 py-2 text-sm font-extrabold text-[#8A6A00]">{c.lowKoin} · {c.fillKoin}</a>
