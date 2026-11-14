@@ -25,7 +25,10 @@
 
 {#if splash && browser}
 	<div class="fixed inset-0 z-50 flex flex-col items-center justify-center bg-cream">
-		<img src="/brand/loading.gif" alt="" class="motion h-28 w-28 object-contain" />
+		<picture class="motion">
+			<source srcset="/brand/loading.webp" type="image/webp" />
+			<img src="/brand/loading.gif" alt="" class="h-28 w-28 object-contain" />
+		</picture>
 		<img src="/icon-512.png" alt="" class="hidden h-24 w-24 motion-off" style="display:none" />
 		<p class="fd mt-3 text-lg">{c.loading}</p>
 	</div>

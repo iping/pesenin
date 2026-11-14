@@ -16,6 +16,7 @@ import (
 
 	"pesenin.product.biz.id/api/internal/db"
 	"pesenin.product.biz.id/api/internal/hours"
+	"pesenin.product.biz.id/api/internal/images"
 	"pesenin.product.biz.id/api/internal/orderflow"
 	"pesenin.product.biz.id/api/internal/text"
 	"pesenin.product.biz.id/api/internal/uniqueamount"
@@ -536,20 +537,17 @@ func (a *App) hydrate(ctx context.Context, o db.Order) (OrderDetail, error) {
 	return OrderDetail{Order: o, Items: items, Charges: charges, Customer: cust, Bank: bank, Proofs: proofs, Batch: batch, Store: store, Brand: brand}, nil
 }
 
-func (a *App) SaveProof(ctx context.Context, token string, r io.Reader, mime string, size int) error {
-	if size <= 0 || size > 2_500_000 {
-		return E(400, "bad_file", "Ukuran bukti maksimal 2,5 MB.")
+func (a *App) SaveProof(ctx context.Context, token string, r io.Reader, mime string) error {
+	res, err := prepareImage(r, mime, images.Proof)
+	if err != nil {
+		return err
 	}
-	switch mime {
-	case "image/jpeg", "image/png", "image/webp":
-	default:
-		return E(400, "bad_file", "Bukti harus JPG, PNG, atau WebP.")
-	}
+	dir := "proofs/" + uuid.NewString()
 	var orderID uuid.UUID
 	var brandID uuid.UUID
 	var code string
 	var name string
-	err := a.tx(ctx, func(q *db.Queries) error {
+	err = a.tx(ctx, func(q *db.Queries) error {
 		o, err := q.GetOrderByTokenForUpdate(ctx, token)
 		if errors.Is(err, pgx.ErrNoRows) {
 			return E(404, "not_found", "Pesanan tidak ketemu.")
@@ -560,18 +558,12 @@ func (a *App) SaveProof(ctx context.Context, token string, r io.Reader, mime str
 		if !orderflow.CanUploadProof(o.PaymentStatus) {
 			return E(409, "bad_state", "Pesanan ini sudah tidak menerima bukti.")
 		}
-		ext := "jpg"
-		if mime == "image/png" {
-			ext = "png"
-		} else if mime == "image/webp" {
-			ext = "webp"
-		}
-		key := "proofs/" + uuid.NewString() + "." + ext
-		if err := a.Blob.Put(ctx, key, r, mime); err != nil {
+		key, n, err := a.putImage(ctx, dir, res)
+		if err != nil {
 			return err
 		}
 		if _, err := q.InsertProof(ctx, db.InsertProofParams{
-			OrderID: pgu(o.ID), ObjectKey: key, Mime: mime, SizeBytes: int32(size),
+			OrderID: pgu(o.ID), ObjectKey: key, Mime: res.MIME, SizeBytes: int32(n),
 		}); err != nil {
 			return err
 		}

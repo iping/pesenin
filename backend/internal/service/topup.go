@@ -11,6 +11,7 @@ import (
 	"github.com/jackc/pgx/v5"
 
 	"pesenin.product.biz.id/api/internal/db"
+	"pesenin.product.biz.id/api/internal/images"
 	"pesenin.product.biz.id/api/internal/koin"
 	"pesenin.product.biz.id/api/internal/uniqueamount"
 )
@@ -134,15 +135,12 @@ func (a *App) CreateTopup(ctx context.Context, userID uuid.UUID, amount int64, i
 	return created, err
 }
 
-func (a *App) SubmitTopupProof(ctx context.Context, userID, topupID uuid.UUID, r io.Reader, mime string, size int) (db.Topup, error) {
-	if size <= 0 || size > 2_500_000 {
-		return db.Topup{}, E(400, "bad_file", "Ukuran bukti maksimal 2,5 MB.")
+func (a *App) SubmitTopupProof(ctx context.Context, userID, topupID uuid.UUID, r io.Reader, mime string) (db.Topup, error) {
+	res, err := prepareImage(r, mime, images.Proof)
+	if err != nil {
+		return db.Topup{}, err
 	}
-	switch mime {
-	case "image/jpeg", "image/png", "image/webp":
-	default:
-		return db.Topup{}, E(400, "bad_file", "Bukti harus JPG, PNG, atau WebP.")
-	}
+	dir := "topups/" + uuid.NewString()
 	acc, err := a.Q.GetAccountByOwner(ctx, userID)
 	if err != nil {
 		return db.Topup{}, err
@@ -159,17 +157,11 @@ func (a *App) SubmitTopupProof(ctx context.Context, userID, topupID uuid.UUID, r
 		if t.Status != "pending" && t.Status != "awaiting_verification" {
 			return E(409, "bad_state", "Top up ini sudah tidak menerima bukti.")
 		}
-		ext := "jpg"
-		if mime == "image/png" {
-			ext = "png"
-		} else if mime == "image/webp" {
-			ext = "webp"
-		}
-		key := "topups/" + uuid.NewString() + "." + ext
-		if err := a.Blob.Put(ctx, key, r, mime); err != nil {
+		key, n, err := a.putImage(ctx, dir, res)
+		if err != nil {
 			return err
 		}
-		if _, err := q.InsertProof(ctx, db.InsertProofParams{TopupID: pgu(t.ID), ObjectKey: key, Mime: mime, SizeBytes: int32(size)}); err != nil {
+		if _, err := q.InsertProof(ctx, db.InsertProofParams{TopupID: pgu(t.ID), ObjectKey: key, Mime: res.MIME, SizeBytes: int32(n)}); err != nil {
 			return err
 		}
 		out, err = q.SetTopupProof(ctx, db.SetTopupProofParams{ID: t.ID, ProofKey: &key})

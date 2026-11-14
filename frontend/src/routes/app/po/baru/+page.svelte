@@ -6,6 +6,7 @@
 	import { api, ApiError } from '$lib/api';
 	import { presetWall, snapWall, wallToISO } from '$lib/format';
 	import DateTimeField from '$lib/components/DateTimeField.svelte';
+	import PingImage from '$lib/components/PingImage.svelte';
 
 	let c = $derived(copy($lang));
 	let brandId = $state('');
@@ -95,7 +96,7 @@
 		{#each products as p}
 			<label class="mt-2 flex items-center gap-2 text-sm font-extrabold">
 				<input type="checkbox" bind:checked={picked[p.id]} />
-				{#if p.photoUrl}<img src={p.photoUrl} alt="" class="h-8 w-8 rounded-lg object-cover" />{:else}<img src="/brand/placeholder-1x1.png" alt="" class="h-8 w-8 rounded-lg object-cover" />{/if}
+				<span class="relative h-8 w-8 shrink-0 overflow-hidden rounded-lg"><PingImage src={p.photoUrl} alt="" sizes="32px" /></span>
 				<span class="flex-1">{p.name}</span>
 				<span>Rp {p.price.toLocaleString('id-ID')}</span>
 			</label>

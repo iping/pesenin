@@ -2,6 +2,7 @@
 	import { lang, copy } from '$lib/i18n';
 	import { api, ApiError } from '$lib/api';
 	import { rp, splitAmount, when, countdown, syncClock } from '$lib/format';
+	import { prepareUpload, uploadAccept } from '$lib/images';
 
 	let { data } = $props();
 	let order = $state(data.order);
@@ -29,38 +30,14 @@
 		setTimeout(() => (copied = ''), 1200);
 	}
 
-	async function compress(f: File): Promise<Blob> {
-		try {
-			const img = document.createElement('img');
-			const url = URL.createObjectURL(f);
-			await new Promise<void>((res, rej) => {
-				img.onload = () => res();
-				img.onerror = () => rej(new Error('decode'));
-				img.src = url;
-			});
-			const max = 1280;
-			const scale = Math.min(1, max / Math.max(img.width, img.height));
-			const canvas = document.createElement('canvas');
-			canvas.width = Math.max(1, Math.round(img.width * scale));
-			canvas.height = Math.max(1, Math.round(img.height * scale));
-			canvas.getContext('2d')!.drawImage(img, 0, 0, canvas.width, canvas.height);
-			URL.revokeObjectURL(url);
-			const blob = await new Promise<Blob | null>((res) => canvas.toBlob(res, 'image/jpeg', 0.72));
-			if (blob && blob.size > 0 && blob.size < 2_400_000) return blob;
-		} catch {
-			/* keep the original file */
-		}
-		return f;
-	}
-
 	async function send() {
 		if (!file) return;
 		busy = true;
 		err = '';
 		try {
-			const blob = await compress(file);
+			const prepared = await prepareUpload(file, 'proof');
 			const body = new FormData();
-			body.append('file', blob, 'bukti.jpg');
+			body.append('file', prepared, prepared.name);
 			const res = await fetch('/api/v1/public/orders/' + order.publicToken + '/proof', { method: 'POST', body });
 			if (!res.ok) {
 				const j = await res.json().catch(() => ({}));
@@ -163,7 +140,7 @@
 				<b class="fd">{c.upload}</b>
 				<div class="text-[11px] font-bold text-ink2">{file ? file.name : c.uploadHint}</div>
 			</div>
-			<input class="hidden" type="file" accept="image/*" onchange={(e) => (file = (e.target as HTMLInputElement).files?.[0] || null)} />
+			<input class="hidden" type="file" accept={uploadAccept} onchange={(e) => (file = (e.target as HTMLInputElement).files?.[0] || null)} />
 		</label>
 		{#if err}<p class="mt-2 text-sm font-extrabold text-danger">{err}</p>{/if}
 		<p class="mt-3 text-center text-[11px] font-bold text-ink2">{c.moneyDirect}</p>

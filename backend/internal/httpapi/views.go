@@ -9,6 +9,7 @@ import (
 	"pesenin.product.biz.id/api/internal/clock"
 	"pesenin.product.biz.id/api/internal/db"
 	"pesenin.product.biz.id/api/internal/hours"
+	"pesenin.product.biz.id/api/internal/images"
 	"pesenin.product.biz.id/api/internal/service"
 )
 
@@ -160,8 +161,10 @@ func orderJSON(d service.OrderDetail) map[string]any {
 	}
 	proofs := []any{}
 	for _, p := range d.Proofs {
+		v := images.Describe(p.ObjectKey)
 		proofs = append(proofs, map[string]any{
-			"id": p.ID, "url": "/api/v1/media/" + p.ObjectKey, "mime": p.Mime,
+			"id": p.ID, "url": v.Src, "displayUrl": v.Display, "thumbUrl": v.Thumb,
+			"srcset": v.Srcset, "width": v.FullWidth, "mime": p.Mime,
 			"status": p.ReviewStatus, "rejectReason": p.RejectReason, "uploadedAt": ts(p.UploadedAt),
 		})
 	}
@@ -200,6 +203,19 @@ func pickupLabel(d service.OrderDetail) any {
 	return clock.Slot(d.Order.PickupSlotStart.Time, d.Order.PickupSlotEnd.Time, tz)
 }
 
+func applyPhoto(m map[string]any, url *string) {
+	if url == nil || *url == "" {
+		m["photoUrl"] = nil
+		return
+	}
+	v := images.Describe(*url)
+	m["photoUrl"] = v.Src
+	if v.Srcset != "" {
+		m["photoSrcset"] = v.Srcset
+		m["photoThumbUrl"] = v.Thumb
+	}
+}
+
 func uuidOrNil(id pgtype.UUID) any {
 	if !id.Valid {
 		return nil
@@ -216,7 +232,11 @@ func topupJSON(t db.Topup, bank *db.PlatformBankAccount) map[string]any {
 		"proofUrl": nil, "serverNow": time.Now().UTC().Format(time.RFC3339),
 	}
 	if t.ProofKey != nil {
-		out["proofUrl"] = "/api/v1/media/" + *t.ProofKey
+		v := images.Describe(*t.ProofKey)
+		out["proofUrl"] = v.Src
+		out["proofDisplayUrl"] = v.Display
+		out["proofSrcset"] = v.Srcset
+		out["proofWidth"] = v.FullWidth
 	}
 	if bank != nil {
 		out["bank"] = map[string]any{"bankCode": bank.BankCode, "accountNumber": bank.AccountNumber, "holderName": bank.HolderName}

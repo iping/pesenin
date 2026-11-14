@@ -49,6 +49,14 @@ TEST_DATABASE_URL='postgres://pesenin:pesenin@127.0.0.1:54329/pesenin_test?sslmo
 
 Covered: unique-amount allocation, the koin ledger, the order state machine, and top-up approval.
 
+Image encode, EXIF orientation, and variant sizes do not need Postgres:
+
+```bash
+cd backend && go test ./internal/images/
+```
+
+Budgets and measured file sizes are in [docs/images.md](docs/images.md).
+
 ## Single VPS
 
 One machine can run the Compose stack behind Caddy on `pesenin.product.biz.id`.

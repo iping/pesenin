@@ -3,6 +3,7 @@
 	import { lang, copy } from '$lib/i18n';
 	import { api } from '$lib/api';
 	import { rp } from '$lib/format';
+	import ProofImage from '$lib/components/ProofImage.svelte';
 
 	let c = $derived(copy($lang));
 	let queue = $state<any[]>([]);
@@ -113,7 +114,7 @@
 		<div class="card p-3">
 			<b class="fd">{t.code}</b>
 			<div class="text-sm font-bold">Harus Rp {rp(t.totalDueRp)} · fee Rp {rp(t.adminFeeRp)} · koin {t.koinToCredit}</div>
-			{#if t.proofUrl}<img src={t.proofUrl} alt="" class="mt-2 max-h-48 rounded-xl" />{/if}
+			{#if t.proofUrl}<div class="mt-2"><ProofImage url={t.proofUrl} compact /></div>{/if}
 			<input class="mt-2 h-10 w-full rounded-xl border border-line px-2" placeholder={c.reason} bind:value={reason} />
 			<div class="mt-2 flex gap-2">
 				<button class="btn sm mint flex-1" onclick={() => approve(t.id)}>{c.approve}</button>

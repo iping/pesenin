@@ -4,6 +4,7 @@
 	import { me, loadMe } from '$lib/session';
 	import { api, ApiError, idem } from '$lib/api';
 	import { rp, when, countdown, syncClock } from '$lib/format';
+	import { prepareUpload, uploadAccept } from '$lib/images';
 
 	let c = $derived(copy($lang));
 	let opts = $state<any>(null);
@@ -49,8 +50,16 @@
 
 	async function proof() {
 		if (!file || !topup) return;
+		err = '';
+		let prepared = file;
+		try {
+			prepared = await prepareUpload(file, 'proof');
+		} catch (e) {
+			err = e instanceof Error ? e.message : 'Gagal';
+			return;
+		}
 		const body = new FormData();
-		body.append('file', file);
+		body.append('file', prepared, prepared.name);
 		const res = await fetch('/api/v1/topups/' + topup.id + '/proof', { method: 'POST', body, credentials: 'include' });
 		if (!res.ok) {
 			const j = await res.json().catch(() => ({}));
@@ -119,7 +128,7 @@
 			<p class="mt-1 text-xs font-extrabold">Berlaku sampai {when(topup.expiresAt)} · {countdown(topup.expiresAt)}</p>
 			<p class="mt-1 text-xs font-bold text-ink2">{c.koinGet}: {topup.koinToCredit.toLocaleString('id-ID')} · {topup.status}</p>
 			{#if topup.status === 'pending' || topup.status === 'awaiting_verification'}
-				<input class="mt-2 text-sm" type="file" accept="image/*" onchange={(e) => (file = (e.target as HTMLInputElement).files?.[0] || null)} />
+				<input class="mt-2 text-sm" type="file" accept={uploadAccept} onchange={(e) => (file = (e.target as HTMLInputElement).files?.[0] || null)} />
 				<button class="btn mt-2" disabled={!file} onclick={proof}>{c.sendProof}</button>
 			{/if}
 			{#if topup.rejectReason}<p class="mt-2 text-sm font-extrabold text-danger">{topup.rejectReason}</p>{/if}

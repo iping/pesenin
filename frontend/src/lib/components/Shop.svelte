@@ -5,6 +5,7 @@
 	import { rp, countdown, syncClock, serverNowMs, when } from '$lib/format';
 	import { api } from '$lib/api';
 	import { liveHours, slotIsFuture } from '$lib/hours';
+	import PingImage from '$lib/components/PingImage.svelte';
 
 	let { shop, origin }: { shop: any; origin: string } = $props();
 	let c = $derived(copy($lang));
@@ -157,12 +158,8 @@
 				{#each batch.items as it}
 					{@const left = it.remaining}
 					<div class="flex items-center gap-3 border-b border-dashed border-line py-2.5">
-						<div class="grid h-16 w-16 shrink-0 place-items-center overflow-hidden rounded-2xl bg-[#FFE7C2]">
-							{#if it.photoUrl}
-								<img src={it.photoUrl} alt="" class="h-full w-full object-cover" />
-							{:else}
-								<img src="/brand/placeholder-1x1.png" alt="" class="h-full w-full object-cover" />
-							{/if}
+						<div class="relative h-16 w-16 shrink-0 overflow-hidden rounded-2xl bg-[#E6E6E6]">
+							<PingImage src={it.photoUrl} alt={it.name || ''} sizes="64px" />
 						</div>
 						<div class="min-w-0 flex-1">
 							<div class="fd text-[15px]">{it.name}{it.variantName ? ` · ${it.variantName}` : ''}</div>

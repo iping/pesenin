@@ -4,6 +4,9 @@ import (
 	"bytes"
 	"context"
 	"fmt"
+	"image"
+	"image/color"
+	"image/jpeg"
 	"os"
 	"sync"
 	"testing"
@@ -217,7 +220,7 @@ func TestTopupApprovalOnce(t *testing.T) {
 	if err != nil || newer.AdminFeeRp != 2500 {
 		t.Fatalf("new fee %d %v", newer.AdminFeeRp, err)
 	}
-	if _, err := app.SubmitTopupProof(ctx, user.ID, top.ID, bytes.NewReader([]byte("bukti")), "image/jpeg", 5); err != nil {
+	if _, err := app.SubmitTopupProof(ctx, user.ID, top.ID, bytes.NewReader(tinyJPEG(t)), "image/jpeg"); err != nil {
 		t.Fatal(err)
 	}
 	approved, err := app.ApproveTopup(ctx, admin, top.ID, nil)
@@ -235,7 +238,7 @@ func TestTopupApprovalOnce(t *testing.T) {
 	if n := countLedger(t, app, w.ID, "topup_credit"); n != 1 {
 		t.Fatalf("credits %d", n)
 	}
-	if _, err := app.SubmitTopupProof(ctx, user.ID, newer.ID, bytes.NewReader([]byte("x")), "image/jpeg", 1); err != nil {
+	if _, err := app.SubmitTopupProof(ctx, user.ID, newer.ID, bytes.NewReader(tinyJPEG(t)), "image/jpeg"); err != nil {
 		t.Fatal(err)
 	}
 	if _, err := app.RejectTopup(ctx, admin, newer.ID, "Bukti tidak terbaca"); err != nil {
@@ -281,6 +284,17 @@ func TestParallelOrdersStayUnique(t *testing.T) {
 		}
 		seen[o.TotalDue] = struct{}{}
 	}
+}
+
+func tinyJPEG(t *testing.T) []byte {
+	t.Helper()
+	img := image.NewNRGBA(image.Rect(0, 0, 8, 8))
+	img.SetNRGBA(1, 1, color.NRGBA{R: 20, G: 40, B: 60, A: 255})
+	var buf bytes.Buffer
+	if err := jpeg.Encode(&buf, img, &jpeg.Options{Quality: 80}); err != nil {
+		t.Fatal(err)
+	}
+	return buf.Bytes()
 }
 
 func fixture(t *testing.T) (*App, db.User, db.PoBatch) {

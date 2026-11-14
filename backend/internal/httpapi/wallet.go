@@ -153,8 +153,8 @@ func (s *Server) topupProof(w http.ResponseWriter, r *http.Request) {
 		writeErr(w, err)
 		return
 	}
-	s.uploadProof(w, r, func(_ string, rc io.Reader, mime string, n int) error {
-		_, err := s.App.SubmitTopupProof(r.Context(), user(r).ID, id, rc, mime, n)
+	s.uploadProof(w, r, func(rc io.Reader, mime string) error {
+		_, err := s.App.SubmitTopupProof(r.Context(), user(r).ID, id, rc, mime)
 		return err
 	})
 }
