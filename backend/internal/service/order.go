@@ -151,6 +151,9 @@ func (a *App) PlaceOrder(ctx context.Context, code string, in PlaceOrder) (db.Or
 	if err != nil {
 		return db.Order{}, err
 	}
+	if err := a.GateBrand(ctx, batch.BrandID); err != nil {
+		return db.Order{}, err
+	}
 	settings, err := a.LoadSettings(ctx)
 	if err != nil {
 		return db.Order{}, err

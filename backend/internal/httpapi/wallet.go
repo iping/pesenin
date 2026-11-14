@@ -442,9 +442,9 @@ func (s *Server) adminAudit(w http.ResponseWriter, r *http.Request) {
 }
 
 func (s *Server) mustAdmin(w http.ResponseWriter, r *http.Request) error {
-	if !user(r).IsPlatformAdmin {
-		writeErr(w, service.E(403, "forbidden", "Khusus admin Pesenin."))
-		return service.E(403, "forbidden", "Khusus admin Pesenin.")
+	if err := service.AdminSessionAllowed(user(r), via(r)); err != nil {
+		writeErr(w, err)
+		return err
 	}
 	return nil
 }

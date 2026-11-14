@@ -29,7 +29,9 @@ func clearCookie(w http.ResponseWriter, name string) {
 func (s *Server) authConfig(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, 200, map[string]any{
 		"google":         s.App.Cfg.GoogleEnabled(),
+		"password":       true,
 		"devLogin":       s.App.Cfg.DevLogin,
+		"kycGate":        s.App.Cfg.KYCEnforced(),
 		"origin":         s.App.Cfg.PublicOrigin,
 		"storage":        s.App.Blob.Mode(),
 		"vapidPublicKey": s.App.Push.PublicKey(),
@@ -50,7 +52,7 @@ func (s *Server) devLogin(w http.ResponseWriter, r *http.Request) {
 		writeErr(w, err)
 		return
 	}
-	raw, err := s.App.StartSession(r.Context(), u.ID, r.UserAgent(), r.RemoteAddr)
+	raw, err := s.App.StartSessionVia(r.Context(), u.ID, r.UserAgent(), r.RemoteAddr, "dev")
 	if err != nil {
 		writeErr(w, err)
 		return
@@ -174,7 +176,7 @@ func (s *Server) googleCallback(w http.ResponseWriter, r *http.Request) {
 		writeErr(w, err)
 		return
 	}
-	rawSess, err := s.App.StartSession(r.Context(), u.ID, r.UserAgent(), r.RemoteAddr)
+	rawSess, err := s.App.StartSessionVia(r.Context(), u.ID, r.UserAgent(), r.RemoteAddr, "google")
 	if err != nil {
 		writeErr(w, err)
 		return

@@ -99,3 +99,25 @@ func TestStorageDir(t *testing.T) {
 		t.Fatalf("explicit = %q", got)
 	}
 }
+
+func TestPasswordAndKYCDefaults(t *testing.T) {
+	t.Setenv("SMTP_HOST", "")
+	t.Setenv("MAIL_DRIVER", "")
+	t.Setenv("KYC_GATE", "")
+	t.Setenv("WA_PROVIDER", "")
+	t.Setenv("SMTP_PORT", "")
+	cfg := Load()
+	if cfg.KYCGate != "contact" || !cfg.KYCEnforced() {
+		t.Fatalf("kyc gate %q", cfg.KYCGate)
+	}
+	if !cfg.MailLog() || cfg.WAProvider != "log" || cfg.SMTPPort != 587 {
+		t.Fatalf("mail=%v wa=%s port=%d", cfg.MailLog(), cfg.WAProvider, cfg.SMTPPort)
+	}
+	t.Setenv("MAIL_DRIVER", "smtp")
+	t.Setenv("SMTP_HOST", "smtp.example.com")
+	t.Setenv("KYC_GATE", "off")
+	cfg = Load()
+	if cfg.MailLog() || cfg.KYCEnforced() {
+		t.Fatal("explicit smtp and gate off")
+	}
+}
