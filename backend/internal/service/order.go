@@ -15,6 +15,7 @@ import (
 	"github.com/jackc/pgx/v5/pgtype"
 
 	"pesenin.product.biz.id/api/internal/db"
+	"pesenin.product.biz.id/api/internal/hours"
 	"pesenin.product.biz.id/api/internal/orderflow"
 	"pesenin.product.biz.id/api/internal/text"
 	"pesenin.product.biz.id/api/internal/uniqueamount"
@@ -177,9 +178,6 @@ func (a *App) PlaceOrder(ctx context.Context, code string, in PlaceOrder) (db.Or
 		if err != nil {
 			return err
 		}
-		if !store.IsOpen && !store.AcceptPreordersWhenClosed {
-			return E(409, "store_closed", "Toko sedang tutup dan belum terima pre-order.")
-		}
 		lines, sub, err := priceLocked(ctx, q, b.ID, in.Items)
 		if err != nil {
 			return err
@@ -253,6 +251,22 @@ func (a *App) PlaceOrder(ctx context.Context, code string, in PlaceOrder) (db.Or
 			}
 			slotStart = &slots[idx].Start
 			slotEnd = &slots[idx].End
+		}
+		// Closed stores refuse an order for today. A later pickup date is a
+		// pre-order and is allowed only when the store says so.
+		now := time.Now()
+		// Read hours on this transaction. A second pool connection here
+		// deadlocks when every connection is already inside PlaceOrder.
+		statuses, err := storeStatuses(ctx, tx, []db.Store{store}, now)
+		if err != nil {
+			return err
+		}
+		status := statuses[store.ID]
+		if ok, why := hours.AllowOrder(status.Open, store.AcceptPreordersWhenClosed, slotStart, now, store.Timezone); !ok {
+			if why == "immediate" {
+				return E(409, "store_closed", "Toko sedang tutup. Pesanan untuk hari ini belum bisa, pilih tanggal ambil lain ya.")
+			}
+			return E(409, "store_closed", "Toko sedang tutup dan belum terima pre-order.")
 		}
 		var order db.Order
 		for try := 0; try < 5; try++ {

@@ -8,6 +8,7 @@ import (
 
 	"pesenin.product.biz.id/api/internal/clock"
 	"pesenin.product.biz.id/api/internal/db"
+	"pesenin.product.biz.id/api/internal/hours"
 	"pesenin.product.biz.id/api/internal/service"
 )
 
@@ -20,7 +21,7 @@ func tsP(t pgtype.Timestamptz) any {
 	return ts(t.Time)
 }
 
-func meJSON(me service.Me) map[string]any {
+func meJSON(me service.Me, byStore map[uuid.UUID]hours.Status) map[string]any {
 	kycBy := map[uuid.UUID]service.BrandKYCView{}
 	for _, k := range me.KYC {
 		kycBy[k.ID] = k
@@ -53,7 +54,7 @@ func meJSON(me service.Me) map[string]any {
 	for _, b := range me.Brands {
 		stores := []any{}
 		for _, st := range me.Stores[b.ID] {
-			stores = append(stores, storeJSON(st))
+			stores = append(stores, storeJSON(st, byStore[st.ID]))
 		}
 		brands = append(brands, map[string]any{
 			"id": b.ID, "name": b.Name, "slug": b.Slug, "description": b.Description,
@@ -86,12 +87,16 @@ func verificationJSON(me service.Me) map[string]any {
 	}
 }
 
-func storeJSON(st db.Store) map[string]any {
-	return map[string]any{
+func storeJSON(st db.Store, status hours.Status) map[string]any {
+	body := map[string]any{
 		"id": st.ID, "name": st.Name, "slug": st.Slug, "address": st.Address, "mapsUrl": st.MapsUrl,
 		"timezone": st.Timezone,
 		"isOpen":   st.IsOpen, "acceptPreordersWhenClosed": st.AcceptPreordersWhenClosed, "isDefault": st.IsDefault,
 	}
+	if status.Timezone != "" || status.Source != "" {
+		body["hours"] = status
+	}
+	return body
 }
 
 func batchJSON(b db.PoBatch, items []db.BatchItem, tz string) map[string]any {

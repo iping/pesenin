@@ -10,7 +10,9 @@ export const load: PageServerLoad = async ({ params, url }) => {
 		store: page.store,
 		batches: [page.batch],
 		charges: page.charges,
-		ordering: page.ordering
+		ordering: page.ordering,
+		statusPath: page.statusPath,
+		serverNow: page.serverNow
 	};
 	return { shop, origin: url.origin, page };
 };

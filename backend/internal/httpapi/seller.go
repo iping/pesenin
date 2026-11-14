@@ -17,7 +17,12 @@ func (s *Server) me(w http.ResponseWriter, r *http.Request) {
 		writeErr(w, err)
 		return
 	}
-	writeJSON(w, 200, meJSON(me))
+	body, err := s.meBody(r.Context(), me)
+	if err != nil {
+		writeErr(w, err)
+		return
+	}
+	writeJSON(w, 200, body)
 }
 
 func (s *Server) slugCheck(w http.ResponseWriter, r *http.Request) {
@@ -47,7 +52,7 @@ func (s *Server) createBrand(w http.ResponseWriter, r *http.Request) {
 		writeErr(w, err)
 		return
 	}
-	writeJSON(w, 201, map[string]any{"brand": brand, "store": storeJSON(store)})
+	writeJSON(w, 201, map[string]any{"brand": brand, "store": s.storeBody(r.Context(), store)})
 }
 
 func (s *Server) patchBrand(w http.ResponseWriter, r *http.Request) {
@@ -105,9 +110,15 @@ func (s *Server) listStores(w http.ResponseWriter, r *http.Request) {
 		writeErr(w, err)
 		return
 	}
+	now := time.Now()
+	statuses, err := s.App.StoreStatuses(r.Context(), rows, now)
+	if err != nil {
+		writeErr(w, err)
+		return
+	}
 	out := []any{}
 	for _, st := range rows {
-		out = append(out, storeJSON(st))
+		out = append(out, storeJSON(st, statuses[st.ID]))
 	}
 	writeJSON(w, 200, out)
 }
@@ -137,7 +148,7 @@ func (s *Server) patchStore(w http.ResponseWriter, r *http.Request) {
 		writeErr(w, err)
 		return
 	}
-	writeJSON(w, 200, storeJSON(st))
+	writeJSON(w, 200, s.storeBody(r.Context(), st))
 }
 
 func (s *Server) listBanks(w http.ResponseWriter, r *http.Request) {
@@ -545,20 +556,20 @@ func (s *Server) patchBatch(w http.ResponseWriter, r *http.Request) {
 
 func readBatch(r *http.Request) (service.BatchIn, error) {
 	var raw struct {
-		StoreID       uuid.UUID `json:"storeId"`
-		Title         string    `json:"title"`
+		StoreID           uuid.UUID      `json:"storeId"`
+		Title             string         `json:"title"`
 		OpensAt           time.Time      `json:"opensAt"`
 		ClosesAt          time.Time      `json:"closesAt"`
 		ReadyAt           time.Time      `json:"readyAt"`
 		PickupSlots       []service.Slot `json:"pickupSlots"`
 		DeadlineMins      *int32         `json:"paymentDeadlineMins"`
 		PaymentDeadlineAt *time.Time     `json:"paymentDeadlineAt"`
-		QuotaTotal    *int32    `json:"quotaTotal"`
-		AllowPickup   bool      `json:"allowPickup"`
-		AllowDelivery bool      `json:"allowDelivery"`
-		Notes         string    `json:"notes"`
-		Publish       bool      `json:"publish"`
-		Items         []struct {
+		QuotaTotal        *int32         `json:"quotaTotal"`
+		AllowPickup       bool           `json:"allowPickup"`
+		AllowDelivery     bool           `json:"allowDelivery"`
+		Notes             string         `json:"notes"`
+		Publish           bool           `json:"publish"`
+		Items             []struct {
 			ProductID uuid.UUID  `json:"productId"`
 			VariantID *uuid.UUID `json:"variantId"`
 			Price     int64      `json:"price"`

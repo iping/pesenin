@@ -146,7 +146,12 @@ func (s *Server) emailChange(w http.ResponseWriter, r *http.Request) {
 		writeErr(w, err)
 		return
 	}
-	writeJSON(w, 200, meJSON(me))
+	payload, err := s.meBody(r.Context(), me)
+	if err != nil {
+		writeErr(w, err)
+		return
+	}
+	writeJSON(w, 200, payload)
 }
 
 func (s *Server) whatsappOTP(w http.ResponseWriter, r *http.Request) {
@@ -181,7 +186,12 @@ func (s *Server) whatsappCheck(w http.ResponseWriter, r *http.Request) {
 		writeErr(w, err)
 		return
 	}
-	writeJSON(w, 200, meJSON(me))
+	payload, err := s.meBody(r.Context(), me)
+	if err != nil {
+		writeErr(w, err)
+		return
+	}
+	writeJSON(w, 200, payload)
 }
 
 func (s *Server) verification(w http.ResponseWriter, r *http.Request) {
@@ -208,7 +218,12 @@ func (s *Server) kycSubmit(w http.ResponseWriter, r *http.Request) {
 		writeErr(w, err)
 		return
 	}
-	writeJSON(w, 200, meJSON(me))
+	payload, err := s.meBody(r.Context(), me)
+	if err != nil {
+		writeErr(w, err)
+		return
+	}
+	writeJSON(w, 200, payload)
 }
 
 func (s *Server) sessionJSON(w http.ResponseWriter, r *http.Request, u db.User, via string) {
@@ -223,5 +238,10 @@ func (s *Server) sessionJSON(w http.ResponseWriter, r *http.Request, u db.User, 
 		writeErr(w, err)
 		return
 	}
-	writeJSON(w, 200, meJSON(me))
+	payload, err := s.meBody(r.Context(), me)
+	if err != nil {
+		writeErr(w, err)
+		return
+	}
+	writeJSON(w, 200, payload)
 }
