@@ -2,7 +2,9 @@
 	import { goto } from '$app/navigation';
 	import { browser } from '$app/environment';
 	import { lang, copy } from '$lib/i18n';
-	import { rp, countdown, syncClock, when } from '$lib/format';
+	import { rp, countdown, syncClock, serverNowMs, when } from '$lib/format';
+	import { api } from '$lib/api';
+	import { liveHours, slotIsFuture } from '$lib/hours';
 	import PingImage from '$lib/components/PingImage.svelte';
 
 	let { shop, origin }: { shop: any; origin: string } = $props();
@@ -12,14 +14,45 @@
 	let tick = $state(0);
 
 	let tz = $derived(shop.store?.timezone || 'Asia/Jakarta');
+	let fetchedHours = $state<any>(undefined);
+	let hoursSnap = $derived(fetchedHours !== undefined ? fetchedHours : (shop.store?.hours ?? null));
+
+	let view = $derived.by(() => {
+		tick;
+		return liveHours(hoursSnap, $lang, serverNowMs(), tz);
+	});
+	let acceptPreorder = $derived(shop.store?.acceptPreordersWhenClosed !== false);
+	let futurePickup = $derived((batch?.pickupSlots || []).some((s: any) => slotIsFuture(s.start, tz, serverNowMs())));
+	let openNow = $derived(view ? view.open : !!shop.store?.isOpen);
+	let canOrder = $derived(hoursSnap ? openNow || (acceptPreorder && futurePickup) : shop.ordering !== false);
 
 	$effect(() => {
+		shop.brand?.slug;
+		shop.store?.slug;
+		fetchedHours = undefined;
 		syncClock(shop.serverNow || batch?.serverNow);
-		if (!browser || !batch) return;
-		const saved = sessionStorage.getItem('cart:' + batch.code);
-		if (saved) qty = JSON.parse(saved);
+		if (!browser) return;
+		if (batch) {
+			const saved = sessionStorage.getItem('cart:' + batch.code);
+			if (saved) qty = JSON.parse(saved);
+		}
 		const id = setInterval(() => (tick += 1), 1000);
-		return () => clearInterval(id);
+		const path = shop.statusPath as string | undefined;
+		const refresh = path
+			? setInterval(async () => {
+					try {
+						const data = await api<any>(path);
+						if (data?.store?.hours) fetchedHours = data.store.hours;
+						if (data?.serverNow) syncClock(data.serverNow);
+					} catch {
+						/* keep the last status */
+					}
+				}, 60000)
+			: 0;
+		return () => {
+			clearInterval(id);
+			if (refresh) clearInterval(refresh);
+		};
 	});
 
 	function setQty(id: string, next: number, max: number | null) {
@@ -77,18 +110,24 @@
 			<img src="/icon-512.png" alt="" class="h-14 w-14" />
 			<div class="min-w-0 flex-1">
 				<h1 class="text-[19px] leading-tight">{shop.brand.name}</h1>
-				<div class="mt-1 flex items-center gap-2">
-					<span class="inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-xs font-extrabold text-white {shop.store.isOpen ? 'bg-[#2EAD5B]' : 'bg-[#9A9A9A]'}">
+				<div class="mt-1 flex flex-wrap items-center gap-1.5">
+					<span class="inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-xs font-extrabold text-white {view?.state === 'closing_soon' ? 'bg-o' : openNow ? 'bg-[#2EAD5B]' : 'bg-[#9A9A9A]'}">
 						<span class="h-1.5 w-1.5 rounded-full bg-white"></span>
-						{shop.store.isOpen ? c.storeOpen : c.storeClosed}
+						{view?.badge || (shop.store.isOpen ? c.storeOpen : c.storeClosed)}
 					</span>
+					{#if view?.hint}<span class="text-[11px] font-extrabold text-od">{view.hint}</span>{/if}
+					{#if shop.brand.verified}
+						<span class="inline-flex items-center rounded-full bg-mint2 px-2.5 py-1 text-xs font-extrabold text-mintd">✓ {c.verifiedBadge}</span>
+					{/if}
 					{#if shop.store.address}<span class="truncate text-[11px] font-bold text-ink2">{shop.store.address}</span>{/if}
 				</div>
 			</div>
 		</div>
 
-		{#if !shop.store.isOpen && shop.store.acceptPreordersWhenClosed}
+		{#if !openNow && canOrder}
 			<p class="mt-2 rounded-xl bg-o3 px-3 py-2 text-xs font-bold text-od">{c.closedNote}</p>
+		{:else if !openNow}
+			<p class="mt-2 rounded-xl bg-[#F4F4F4] px-3 py-2 text-xs font-bold text-ink2">{c.closedToday}</p>
 		{/if}
 
 		{#if batch}
@@ -130,7 +169,9 @@
 								{#if left != null && left <= 5}<span class="text-[11px] font-extrabold text-danger">Sisa {left}</span>{/if}
 							</div>
 						</div>
-						{#if left === 0}
+						{#if !canOrder}
+							<span class="text-xs font-extrabold text-ink3">{c.storeClosed}</span>
+						{:else if left === 0}
 							<span class="text-xs font-extrabold text-ink3">Habis</span>
 						{:else if qty[it.id]}
 							<div class="flex h-[34px] items-center rounded-xl bg-o3 text-od">
@@ -153,7 +194,7 @@
 	</div>
 </div>
 
-{#if count > 0}
+{#if count > 0 && canOrder}
 	<div class="fixed inset-x-0 bottom-3 z-20 mx-auto flex h-[62px] max-w-[406px] items-center gap-2 rounded-[20px] bg-ink px-3.5 text-white shadow-[0_10px_24px_rgba(74,42,26,.35)]">
 		<div class="relative">
 			<span class="text-2xl">🛍</span>

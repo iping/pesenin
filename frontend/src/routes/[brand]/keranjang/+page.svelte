@@ -4,7 +4,8 @@
 	import { onMount } from 'svelte';
 	import { lang, copy } from '$lib/i18n';
 	import { api, ApiError, idem } from '$lib/api';
-	import { rp, syncClock, when } from '$lib/format';
+	import { rp, syncClock, serverNowMs, when } from '$lib/format';
+	import { slotIsFuture } from '$lib/hours';
 
 	let c = $derived(copy($lang));
 	let code = $derived($page.url.searchParams.get('po') || '');
@@ -40,6 +41,9 @@
 		store = pageData.store;
 		tz = pageData.store?.timezone || 'Asia/Jakarta';
 		syncClock(pageData.serverNow || pageData.batch?.serverNow);
+		const slots = pageData.batch?.pickupSlots || [];
+		const ok = slots.findIndex((s: any) => !store?.hours || store.hours.open || (store.acceptPreordersWhenClosed && slotIsFuture(s.start, tz, serverNowMs())));
+		if (ok >= 0) slotIndex = ok;
 		if (!pageData.batch.allowPickup) method = 'delivery';
 		await refresh();
 	});
@@ -59,12 +63,25 @@
 		if (batch) refresh().catch(() => {});
 	});
 
+	function slotAllowed(s: any) {
+		if (!store?.hours || store.hours.open) return true;
+		if (!store.acceptPreordersWhenClosed) return false;
+		return slotIsFuture(s.start, tz, serverNowMs());
+	}
+
+	let chosen = $derived((batch?.pickupSlots || [])[slotIndex]);
+	let slotBlocked = $derived(!!batch && !!store?.hours && !store.hours.open && (!chosen || !slotAllowed(chosen)));
+
 	function shownCharges() {
 		return (charges || []).filter((ch) => (ch.methods || []).includes(method));
 	}
 
 	async function submit() {
 		err = '';
+		if (slotBlocked) {
+			err = c.closedToday;
+			return;
+		}
 		busy = true;
 		try {
 			localStorage.setItem('pn_guest', JSON.stringify({ name, wa }));
@@ -138,9 +155,12 @@
 				{#if (batch.pickupSlots || []).length}
 					<div class="mt-2 space-y-1">
 						{#each batch.pickupSlots as s, i}
-							<button type="button" class="block w-full rounded-xl border px-3 py-2 text-left text-xs font-extrabold {slotIndex === i ? 'border-o bg-o3 text-od' : 'border-line'}" onclick={() => (slotIndex = i)}>{s.label || when(s.start, tz)}</button>
+							<button type="button" disabled={!slotAllowed(s)} class="block w-full rounded-xl border px-3 py-2 text-left text-xs font-extrabold disabled:opacity-40 {slotIndex === i ? 'border-o bg-o3 text-od' : 'border-line'}" onclick={() => (slotIndex = i)}>{s.label || when(s.start, tz)}{slotAllowed(s) ? '' : ' · tutup'}</button>
 						{/each}
 					</div>
+				{/if}
+				{#if store?.hours && !store.hours.open}
+					<p class="mt-2 rounded-xl bg-o3 px-3 py-2 text-xs font-bold text-od">{store.acceptPreordersWhenClosed ? c.closedNote : c.closedToday}</p>
 				{/if}
 				{#if method === 'delivery'}
 					<label class="mt-2 block text-xs font-extrabold text-ink2">{c.address}
@@ -175,5 +195,5 @@
 		<b class="fd text-[22px] leading-none">Rp {rp(quote?.baseTotal || 0)}</b>
 		<div class="text-[10px] font-extrabold text-ink3">{c.uniqueLater}</div>
 	</div>
-	<button class="btn w-[180px]" disabled={busy || !name || !wa} onclick={submit}>{c.orderNow}</button>
+	<button class="btn w-[180px]" disabled={busy || !name || !wa || slotBlocked} onclick={submit}>{c.orderNow}</button>
 </div>

@@ -96,6 +96,14 @@ func (a *App) UpsertGoogle(ctx context.Context, sub, email, name, avatar string)
 	}
 	subCopy := sub
 	if u, err := a.Q.GetUserByGoogleSub(ctx, &subCopy); err == nil {
+		if strings.EqualFold(u.Email, email) {
+			if err := a.markEmailVerified(ctx, u.ID); err != nil {
+				return db.User{}, err
+			}
+			if err := a.SyncContactKYC(ctx, u.ID); err != nil {
+				return db.User{}, err
+			}
+		}
 		return u, nil
 	}
 	if u, err := a.Q.GetUserByEmail(ctx, email); err == nil {
@@ -104,12 +112,18 @@ func (a *App) UpsertGoogle(ctx context.Context, sub, email, name, avatar string)
 				return db.User{}, err
 			}
 		}
+		if err := a.markEmailVerified(ctx, u.ID); err != nil {
+			return db.User{}, err
+		}
 		u, err = a.Q.GetUserByID(ctx, u.ID)
 		if err != nil {
 			return db.User{}, err
 		}
 		if !u.IsPlatformAdmin {
 			_, _, _, err = a.EnsureSellerAccount(ctx, u)
+		}
+		if err == nil {
+			err = a.SyncContactKYC(ctx, u.ID)
 		}
 		return u, err
 	}
@@ -118,12 +132,57 @@ func (a *App) UpsertGoogle(ctx context.Context, sub, email, name, avatar string)
 		return db.User{}, err
 	}
 	_ = a.Q.InsertIdentity(ctx, db.InsertIdentityParams{UserID: u.ID, Provider: "google", ProviderSubject: sub})
+	if err := a.markEmailVerified(ctx, u.ID); err != nil {
+		return db.User{}, err
+	}
 	if !u.IsPlatformAdmin {
 		if _, _, _, err := a.EnsureSellerAccount(ctx, u); err != nil {
 			return db.User{}, err
 		}
 	}
+	if err := a.SyncContactKYC(ctx, u.ID); err != nil {
+		return db.User{}, err
+	}
 	return u, nil
+}
+
+// StartSessionVia records how the session was opened.
+// Password sessions cannot open the Office Pesenin admin.
+// If the marker cannot be stored, the session is deleted and no token is returned.
+func (a *App) StartSessionVia(ctx context.Context, userID uuid.UUID, ua, ip, via string) (string, error) {
+	raw, err := a.StartSession(ctx, userID, ua, ip)
+	if err != nil || via == "" {
+		return raw, err
+	}
+	tag, err := a.Pool.Exec(ctx, `UPDATE sessions SET auth_via = $2 WHERE token_hash = $1`, hashToken(raw), via)
+	if err != nil || tag.RowsAffected() != 1 {
+		_ = a.Q.DeleteSessionByHash(ctx, hashToken(raw))
+		if err == nil {
+			err = errors.New("session marker was not stored")
+		}
+		return "", err
+	}
+	return raw, nil
+}
+
+// SessionUser loads the user and the way this session was opened.
+func (a *App) SessionUser(ctx context.Context, raw string) (db.User, string, error) {
+	if raw == "" {
+		return db.User{}, "", E(401, "unauthenticated", "Masuk dulu ya.")
+	}
+	var userID uuid.UUID
+	var via string
+	err := a.Pool.QueryRow(ctx, `
+		SELECT user_id, auth_via FROM sessions
+		WHERE token_hash = $1 AND expires_at > now()`, hashToken(raw)).Scan(&userID, &via)
+	if errors.Is(err, pgx.ErrNoRows) {
+		return db.User{}, "", E(401, "unauthenticated", "Sesi habis. Masuk lagi ya.")
+	}
+	if err != nil {
+		return db.User{}, "", err
+	}
+	u, err := a.Q.GetUserByID(ctx, userID)
+	return u, via, err
 }
 
 func (a *App) StartSession(ctx context.Context, userID uuid.UUID, ua, ip string) (string, error) {
@@ -181,6 +240,8 @@ type Me struct {
 	Low     bool
 	Floor   int64
 	Fee     int64
+	Contact ContactView
+	KYC     []BrandKYCView
 }
 
 func (a *App) LoadMe(ctx context.Context, user db.User) (Me, error) {
@@ -217,6 +278,16 @@ func (a *App) LoadMe(ctx context.Context, user db.User) (Me, error) {
 			return me, err
 		}
 		me.Stores[b.ID] = stores
+	}
+	me.Contact, err = a.ContactOf(ctx, user)
+	if err != nil {
+		return me, err
+	}
+	if me.Account != nil {
+		me.KYC, err = a.BrandKYCViews(ctx, me.Account.ID)
+		if err != nil {
+			return me, err
+		}
 	}
 	return me, nil
 }

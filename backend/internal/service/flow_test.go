@@ -305,7 +305,7 @@ func fixture(t *testing.T) (*App, db.User, db.PoBatch) {
 		t.Fatal(err)
 	}
 	t.Cleanup(pool.Close)
-	cfg := config.Config{DevLogin: true, AdminEmail: "admin@pesenin.test", PublicOrigin: "http://127.0.0.1:43123", SessionTTL: time.Hour}
+	cfg := config.Config{DevLogin: true, AdminEmail: "admin@pesenin.test", PublicOrigin: "http://127.0.0.1:43123", SessionTTL: time.Hour, KYCGate: "off"}
 	app := New(pool, cfg, storage.Local{Dir: t.TempDir()}, nil)
 	ctx := context.Background()
 	email := "rina-" + uuid.NewString()[:8] + "@test.local"
@@ -436,7 +436,8 @@ func reset(t *testing.T) {
 	}
 	defer conn.Close(ctx)
 	_, err = conn.Exec(ctx, `
-		TRUNCATE audit_logs, notifications, push_subscriptions, message_templates,
+		TRUNCATE brand_kyc_documents, brand_kyc_events, whatsapp_otps, auth_tokens,
+			audit_logs, notifications, push_subscriptions, message_templates,
 			payment_proofs, order_charges, order_items, orders, customers,
 			batch_items, po_batches, extra_charges, product_variants, products,
 			bank_accounts, stores, brands, wallet_transactions, wallets,

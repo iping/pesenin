@@ -8,6 +8,7 @@ import (
 
 	"pesenin.product.biz.id/api/internal/clock"
 	"pesenin.product.biz.id/api/internal/db"
+	"pesenin.product.biz.id/api/internal/hours"
 	"pesenin.product.biz.id/api/internal/images"
 	"pesenin.product.biz.id/api/internal/service"
 )
@@ -21,13 +22,18 @@ func tsP(t pgtype.Timestamptz) any {
 	return ts(t.Time)
 }
 
-func meJSON(me service.Me) map[string]any {
+func meJSON(me service.Me, byStore map[uuid.UUID]hours.Status) map[string]any {
+	kycBy := map[uuid.UUID]service.BrandKYCView{}
+	for _, k := range me.KYC {
+		kycBy[k.ID] = k
+	}
 	out := map[string]any{
 		"user": map[string]any{
 			"id": me.User.ID, "email": me.User.Email, "name": me.User.Name,
 			"avatarUrl": me.User.AvatarUrl, "isPlatformAdmin": me.User.IsPlatformAdmin,
 		},
-		"softLocked": me.Locked, "lowBalance": me.Low, "graceFloor": me.Floor, "orderFee": me.Fee,
+		"verification": verificationJSON(me),
+		"softLocked":   me.Locked, "lowBalance": me.Low, "graceFloor": me.Floor, "orderFee": me.Fee,
 	}
 	if me.Account != nil {
 		out["account"] = map[string]any{"id": me.Account.ID, "name": me.Account.Name, "status": me.Account.Status}
@@ -49,23 +55,49 @@ func meJSON(me service.Me) map[string]any {
 	for _, b := range me.Brands {
 		stores := []any{}
 		for _, st := range me.Stores[b.ID] {
-			stores = append(stores, storeJSON(st))
+			stores = append(stores, storeJSON(st, byStore[st.ID]))
 		}
 		brands = append(brands, map[string]any{
 			"id": b.ID, "name": b.Name, "slug": b.Slug, "description": b.Description,
 			"waNumber": b.WaNumber, "logoUrl": b.LogoUrl, "stores": stores,
+			"kycStatus": kycBy[b.ID].Status, "kycReason": kycBy[b.ID].Reason,
 		})
 	}
 	out["brands"] = brands
 	return out
 }
 
-func storeJSON(st db.Store) map[string]any {
+func verificationJSON(me service.Me) map[string]any {
+	brands := []any{}
+	for _, k := range me.KYC {
+		brands = append(brands, map[string]any{
+			"id": k.ID, "name": k.Name, "slug": k.Slug,
+			"status": k.Status, "reason": k.Reason,
+		})
+	}
+	if brands == nil {
+		brands = []any{}
+	}
 	return map[string]any{
+		"emailVerified":    me.Contact.EmailVerified,
+		"whatsapp":         me.Contact.Whatsapp,
+		"whatsappVerified": me.Contact.WhatsappVerified,
+		"hasPassword":      me.Contact.HasPassword,
+		"kycGate":          me.Contact.Gate,
+		"brands":           brands,
+	}
+}
+
+func storeJSON(st db.Store, status hours.Status) map[string]any {
+	body := map[string]any{
 		"id": st.ID, "name": st.Name, "slug": st.Slug, "address": st.Address, "mapsUrl": st.MapsUrl,
 		"timezone": st.Timezone,
 		"isOpen":   st.IsOpen, "acceptPreordersWhenClosed": st.AcceptPreordersWhenClosed, "isDefault": st.IsDefault,
 	}
+	if status.Timezone != "" || status.Source != "" {
+		body["hours"] = status
+	}
+	return body
 }
 
 func batchJSON(b db.PoBatch, items []db.BatchItem, tz string) map[string]any {

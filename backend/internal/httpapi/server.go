@@ -42,6 +42,12 @@ func (s *Server) Router() http.Handler {
 		r.Get("/auth/google/start", s.googleStart)
 		r.Get("/auth/google/callback", s.googleCallback)
 		r.With(httprate.LimitByIP(20, time.Minute)).Post("/auth/dev", s.devLogin)
+		r.Post("/auth/password/signup", s.passwordSignup)
+		r.Post("/auth/password/login", s.passwordLogin)
+		r.Post("/auth/password/forgot", s.passwordForgot)
+		r.Post("/auth/password/reset", s.passwordReset)
+		r.Post("/auth/email/verify", s.emailVerify)
+		r.Post("/auth/email/resend", s.emailResend)
 		r.Post("/auth/logout", s.logout)
 		r.Post("/auth/logout-all", s.logoutAll)
 
@@ -59,12 +65,28 @@ func (s *Server) Router() http.Handler {
 		r.Group(func(r chi.Router) {
 			r.Use(s.authn)
 			r.Get("/me", s.me)
+			r.Get("/me/verification", s.verification)
+			r.Post("/me/email", s.emailChange)
+			r.Post("/me/whatsapp/otp", s.whatsappOTP)
+			r.Post("/me/whatsapp/otp/check", s.whatsappCheck)
+			r.Post("/auth/password/link", s.passwordLink)
 			r.Get("/dashboard", s.dashboard)
 			r.Get("/slugs/check", s.slugCheck)
 			r.Post("/brands", s.createBrand)
 			r.Patch("/brands/{brandId}", s.patchBrand)
+			r.Post("/brands/{brandId}/kyc/submit", s.kycSubmit)
 			r.Get("/brands/{brandId}/stores", s.listStores)
+			r.Get("/brands/{brandId}/hours", s.getBrandHours)
+			r.Put("/brands/{brandId}/hours", s.putBrandHours)
+			r.Post("/brands/{brandId}/specials", s.postBrandSpecial)
 			r.Patch("/stores/{storeId}", s.patchStore)
+			r.Get("/stores/{storeId}/hours", s.getStoreHours)
+			r.Put("/stores/{storeId}/hours", s.putStoreHours)
+			r.Post("/stores/{storeId}/hours/copy", s.copyStoreHours)
+			r.Post("/stores/{storeId}/override", s.postOverride)
+			r.Delete("/stores/{storeId}/override", s.deleteOverride)
+			r.Post("/stores/{storeId}/specials", s.postStoreSpecial)
+			r.Delete("/specials/{specialId}", s.deleteSpecial)
 			r.Get("/brands/{brandId}/bank-accounts", s.listBanks)
 			r.Post("/brands/{brandId}/bank-accounts", s.addBank)
 			r.Get("/brands/{brandId}/products", s.listProducts)
@@ -109,6 +131,7 @@ func (s *Server) Router() http.Handler {
 			r.Delete("/push/subscriptions/{id}", s.deletePush)
 
 			r.Route("/admin", func(r chi.Router) {
+				r.Get("/stores", s.adminStores)
 				r.Get("/topups", s.adminTopups)
 				r.Post("/topups/{topupId}/approve", s.adminApprove)
 				r.Post("/topups/{topupId}/reject", s.adminReject)
@@ -119,6 +142,11 @@ func (s *Server) Router() http.Handler {
 				r.Post("/wallets/{accountId}/adjust", s.adminAdjust)
 				r.Get("/reports/koin", s.adminReport)
 				r.Get("/audit", s.adminAudit)
+				r.Get("/kyc/brands", s.adminKYCBrands)
+				r.Get("/kyc/brands/{brandId}", s.adminKYCBrand)
+				r.Post("/kyc/brands/{brandId}/approve", s.adminKYCApprove)
+				r.Post("/kyc/brands/{brandId}/reject", s.adminKYCReject)
+				r.Post("/kyc/brands/{brandId}/suspend", s.adminKYCSuspend)
 			})
 		})
 	})
@@ -128,6 +156,16 @@ func (s *Server) Router() http.Handler {
 type ctxKey int
 
 const userKey ctxKey = 1
+const viaKey ctxKey = 2
+
+func withVia(ctx context.Context, via string) context.Context {
+	return context.WithValue(ctx, viaKey, via)
+}
+
+func via(r *http.Request) string {
+	v, _ := r.Context().Value(viaKey).(string)
+	return v
+}
 
 func (s *Server) authn(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -136,12 +174,13 @@ func (s *Server) authn(next http.Handler) http.Handler {
 			writeErr(w, service.E(401, "unauthenticated", "Masuk dulu ya."))
 			return
 		}
-		u, err := s.App.UserFromSession(r.Context(), c.Value)
+		u, via, err := s.App.SessionUser(r.Context(), c.Value)
 		if err != nil {
 			writeErr(w, err)
 			return
 		}
-		next.ServeHTTP(w, r.WithContext(withUser(r.Context(), u)))
+		ctx := withUser(r.Context(), u)
+		next.ServeHTTP(w, r.WithContext(withVia(ctx, via)))
 	})
 }
 

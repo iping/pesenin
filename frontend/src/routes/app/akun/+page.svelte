@@ -108,6 +108,7 @@
 	</div>
 	{#if $me}
 		<p class="text-sm font-bold text-ink2">{$me.user.name} · {$me.user.email}</p>
+		<a class="text-sm font-extrabold text-od" href="/app/verifikasi">{c.verifyTitle}</a>
 		{#if $me.user.isPlatformAdmin}<a class="btn sm" href="/app/admin">{c.admin}</a>{/if}
 	{/if}
 	{#if brand}
@@ -115,7 +116,8 @@
 			<input type="checkbox" checked={brand.stores[0].acceptPreordersWhenClosed} onchange={(e) => preorder((e.target as HTMLInputElement).checked)} />
 			{c.preorderOk}
 		</label>
-		<a class="text-sm font-extrabold text-od" href="/app/pelanggan">{c.customers}</a>
+		<a class="text-sm font-extrabold text-od" href="/app/jadwal">{c.hoursLink}</a>
+		<a class="block text-sm font-extrabold text-od" href="/app/pelanggan">{c.customers}</a>
 
 		<div class="card p-3">
 			<div class="fd">{c.products}</div>

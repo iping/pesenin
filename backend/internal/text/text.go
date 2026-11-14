@@ -82,6 +82,11 @@ func WhatsApp(in string) (string, error) {
 	}
 	s := d.String()
 	switch {
+	case strings.HasPrefix(s, "00"):
+		s = strings.TrimPrefix(s, "00")
+		if strings.HasPrefix(s, "0") {
+			s = "62" + s[1:]
+		}
 	case strings.HasPrefix(s, "0"):
 		s = "62" + s[1:]
 	case strings.HasPrefix(s, "8"):

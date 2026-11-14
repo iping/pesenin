@@ -4,12 +4,26 @@
 	import { me, loadMe, brandOf } from '$lib/session';
 	import { api } from '$lib/api';
 	import { rp, greet } from '$lib/format';
+	import { liveHours } from '$lib/hours';
 	import QRCode from 'qrcode';
 
 	let c = $derived(copy($lang));
 	let dash = $state<any>(null);
 	let brand = $derived(brandOf($me));
 	let qr = $state('');
+	let tick = $state(0);
+
+	let st = $derived(brand?.stores?.[0]);
+	let hv = $derived.by(() => {
+		tick;
+		return liveHours(st?.hours, $lang, Date.now(), st?.timezone || 'Asia/Jakarta');
+	});
+	let openNow = $derived(hv ? hv.open : !!st?.isOpen);
+
+	$effect(() => {
+		const clock = setInterval(() => (tick += 1), 30000);
+		return () => clearInterval(clock);
+	});
 
 	onMount(async () => {
 		const data = $me || (await loadMe());
@@ -20,20 +34,30 @@
 	});
 
 	async function toggle() {
-		if (!brand) return;
-		const st = brand.stores[0];
-		const next = await api<any>('/api/v1/stores/' + st.id, {
-			method: 'PATCH',
-			body: JSON.stringify({
-				name: st.name,
-				address: st.address,
-				mapsUrl: st.mapsUrl,
-				isOpen: !st.isOpen,
-				acceptPreordersWhenClosed: st.acceptPreordersWhenClosed
-			})
-		});
-		brand.stores[0] = next;
-		me.set($me);
+		if (!st) return;
+		const open = openNow;
+		if (st.hours?.source && st.hours.source !== 'legacy') {
+			if (st.hours.source === 'override' && st.hours.scheduleOpen !== open) {
+				await api('/api/v1/stores/' + st.id + '/override', { method: 'DELETE' });
+			} else {
+				await api('/api/v1/stores/' + st.id + '/override', {
+					method: 'POST',
+					body: JSON.stringify({ kind: open ? 'closed' : 'open' })
+				});
+			}
+		} else {
+			await api('/api/v1/stores/' + st.id, {
+				method: 'PATCH',
+				body: JSON.stringify({
+					name: st.name,
+					address: st.address,
+					mapsUrl: st.mapsUrl,
+					isOpen: !open,
+					acceptPreordersWhenClosed: st.acceptPreordersWhenClosed
+				})
+			});
+		}
+		await loadMe();
 	}
 
 	function downloadQR() {
@@ -58,13 +82,14 @@
 		<div class="card flex items-center gap-3 p-3">
 			<img src="/icon-512.png" alt="" class="h-11 w-11" />
 			<div class="flex-1">
-				<div class="flex items-center gap-2">
+				<div class="flex flex-wrap items-center gap-2">
 					<b class="fd">Toko lagi</b>
-					<span class="rounded-full px-2 py-0.5 text-xs font-extrabold text-white {brand.stores[0].isOpen ? 'bg-[#2EAD5B]' : 'bg-[#9A9A9A]'}">{brand.stores[0].isOpen ? c.storeOpen : c.storeClosed}</span>
+					<span class="rounded-full px-2 py-0.5 text-xs font-extrabold text-white {hv?.state === 'closing_soon' ? 'bg-o' : openNow ? 'bg-[#2EAD5B]' : 'bg-[#9A9A9A]'}">{hv?.badge || (openNow ? c.storeOpen : c.storeClosed)}</span>
 				</div>
-				<div class="text-[11px] font-bold text-ink2">{brand.stores[0].address || brand.slug}</div>
+				<div class="text-[11px] font-bold text-ink2">{hv?.hint || st?.address || brand.slug}</div>
+				<a class="text-[11px] font-extrabold text-od" href="/app/jadwal">{c.hoursLink}</a>
 			</div>
-			<button class="h-7 w-12 rounded-full {brand.stores[0].isOpen ? 'bg-mint' : 'bg-[#D9D0C8]'}" onclick={toggle} aria-label="buka tutup"><span class="block h-5 w-5 rounded-full bg-white {brand.stores[0].isOpen ? 'ml-6' : 'ml-1'}"></span></button>
+			<button class="h-7 w-12 rounded-full {openNow ? 'bg-mint' : 'bg-[#D9D0C8]'}" onclick={toggle} aria-label="buka tutup"><span class="block h-5 w-5 rounded-full bg-white {openNow ? 'ml-6' : 'ml-1'}"></span></button>
 		</div>
 
 		<div class="relative overflow-hidden rounded-[22px] bg-gradient-to-br from-[#FFA445] via-o to-[#EA6A0C] p-4 text-white shadow-[0_5px_0_#E06F0A]">

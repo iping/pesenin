@@ -21,7 +21,7 @@ func (s *Server) wallet(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	writeJSON(w, 200, map[string]any{
-		"wallet": meJSON(me)["wallet"], "softLocked": me.Locked, "lowBalance": me.Low,
+		"wallet": meJSON(me, nil)["wallet"], "softLocked": me.Locked, "lowBalance": me.Low,
 		"graceFloor": me.Floor, "orderFee": me.Fee,
 	})
 }
@@ -442,9 +442,9 @@ func (s *Server) adminAudit(w http.ResponseWriter, r *http.Request) {
 }
 
 func (s *Server) mustAdmin(w http.ResponseWriter, r *http.Request) error {
-	if !user(r).IsPlatformAdmin {
-		writeErr(w, service.E(403, "forbidden", "Khusus admin Pesenin."))
-		return service.E(403, "forbidden", "Khusus admin Pesenin.")
+	if err := service.AdminSessionAllowed(user(r), via(r)); err != nil {
+		writeErr(w, err)
+		return err
 	}
 	return nil
 }

@@ -22,7 +22,7 @@ func TestSlug(t *testing.T) {
 }
 
 func TestWhatsApp(t *testing.T) {
-	for _, in := range []string{"0812 3456 7890", "+6281234567890", "6281234567890", "81234567890"} {
+	for _, in := range []string{"0812 3456 7890", "+6281234567890", "6281234567890", "81234567890", "006281234567890"} {
 		got, err := WhatsApp(in)
 		if err != nil || got != "+6281234567890" {
 			t.Fatalf("%s -> %s %v", in, got, err)

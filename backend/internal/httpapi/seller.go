@@ -18,7 +18,12 @@ func (s *Server) me(w http.ResponseWriter, r *http.Request) {
 		writeErr(w, err)
 		return
 	}
-	writeJSON(w, 200, meJSON(me))
+	body, err := s.meBody(r.Context(), me)
+	if err != nil {
+		writeErr(w, err)
+		return
+	}
+	writeJSON(w, 200, body)
 }
 
 func (s *Server) slugCheck(w http.ResponseWriter, r *http.Request) {
@@ -48,7 +53,7 @@ func (s *Server) createBrand(w http.ResponseWriter, r *http.Request) {
 		writeErr(w, err)
 		return
 	}
-	writeJSON(w, 201, map[string]any{"brand": brand, "store": storeJSON(store)})
+	writeJSON(w, 201, map[string]any{"brand": brand, "store": s.storeBody(r.Context(), store)})
 }
 
 func (s *Server) patchBrand(w http.ResponseWriter, r *http.Request) {
@@ -106,9 +111,15 @@ func (s *Server) listStores(w http.ResponseWriter, r *http.Request) {
 		writeErr(w, err)
 		return
 	}
+	now := time.Now()
+	statuses, err := s.App.StoreStatuses(r.Context(), rows, now)
+	if err != nil {
+		writeErr(w, err)
+		return
+	}
 	out := []any{}
 	for _, st := range rows {
-		out = append(out, storeJSON(st))
+		out = append(out, storeJSON(st, statuses[st.ID]))
 	}
 	writeJSON(w, 200, out)
 }
@@ -138,7 +149,7 @@ func (s *Server) patchStore(w http.ResponseWriter, r *http.Request) {
 		writeErr(w, err)
 		return
 	}
-	writeJSON(w, 200, storeJSON(st))
+	writeJSON(w, 200, s.storeBody(r.Context(), st))
 }
 
 func (s *Server) listBanks(w http.ResponseWriter, r *http.Request) {
